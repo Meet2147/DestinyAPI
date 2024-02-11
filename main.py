@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 import typing
 from typing import Dict
 
@@ -21,31 +21,32 @@ def calculate_single_digit(num: int) -> int:
         num = sum(int(digit) for digit in str(num))
     return num
 
-def calculate_birthdate_sum(birthdate: str) -> Dict[str, str]:
+def calculate_birthdate_sum(year: int, month: int, day: int) -> Dict[str, str]:
+    birthdate = f"{year}{month}{day}"
     birthdate_digits = ''.join(filter(str.isdigit, birthdate))
     birthdate_sum = sum(map(int, birthdate_digits))
     single_digit_sum = calculate_single_digit(birthdate_sum)
-    print(single_digit_sum)
-    return {"output": data.get(str(single_digit_sum) ,"No matching output found for the given birthdate sum."),
+    return {"output": data.get(str(single_digit_sum), "No matching output found for the given birthdate sum."),
             "Destiny Number": single_digit_sum}
 
 @app.get("/")
 def read_root():
     return {"Destiny": "World"}
 
-
-@app.get("/destiny/{birthdate}")
-async def get_birthdate_output(birthdate: str):
+@app.get("/destiny")
+async def get_birthdate_output(year: int = Query(...), month: int = Query(...), day: int = Query(...)):
     try:
-        result = calculate_birthdate_sum(birthdate)
+        result = calculate_birthdate_sum(year, month, day)
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/destiny_number/{birthdate}")
-async def get_birthdate_output(birthdate: str):
+
+@app.get("/destiny_number")
+async def get_birthdate_output(year: int = Query(...), month: int = Query(...), day: int = Query(...)):
     try:
-        result = calculate_birthdate_sum(birthdate)
+        result = calculate_birthdate_sum(year, month, day)
         return result["Destiny Number"]
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
