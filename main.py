@@ -34,7 +34,7 @@ def read_root():
     return {"Destiny": "World"}
 
 
-@app.get("/birthdate/{birthdate}")
+@app.get("/destiny/{birthdate}")
 async def get_birthdate_output(birthdate: str):
     try:
         result = calculate_birthdate_sum(birthdate)
