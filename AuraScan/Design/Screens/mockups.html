@@ -371,13 +371,11 @@ const analysing = `<div class="screen" id="s-analysing" style="--bloom:rgba(110,
 /* ===========================================================================
    4 — Reading result
    =========================================================================== */
-const BALANCE = [["fire",18],["earth",30],["air",37],["water",15]];
-
-function balanceBar(){
+function balanceBar(balance){
   return `<div>
-    <div class="track recessed">${BALANCE.filter(b=>b[1]>0).map(([e,v])=>
+    <div class="track recessed">${balance.filter(b=>b[1]>0).map(([e,v])=>
       `<i style="width:${v*3.28}px;background:linear-gradient(180deg,${ELEMENTS[e]},${ELEMENTS[e]}8c)"></i>`).join("")}</div>
-    <div class="legend">${BALANCE.map(([e,v])=>
+    <div class="legend">${balance.map(([e,v])=>
       `<span><b style="background:${ELEMENTS[e]}"></b>${e[0].toUpperCase()+e.slice(1)} ${v}%</span>`).join("")}</div>
   </div>`;
 }
@@ -400,72 +398,105 @@ function dots(n, tint){
     ? `<i style="background:${tint};box-shadow:0 0 3px ${tint}b3"></i>`
     : `<i style="background:rgba(0,0,0,.45);border:.5px solid rgba(255,255,255,.07)"></i>`).join("")}</div>`;
 }
-function marker(name, obs, interp, el, planet, tint, intensity){
+function marker(m){
+  const tint = {supportive:"#6EE7B7",neutral:"#B4B0C8",challenging:"#FFA98A"}[m.pol];
+  const sym  = {supportive:"↗",neutral:"●",challenging:"⚠"}[m.pol];
   return `<div class="marker recessed-sm">
     <div style="display:flex;align-items:center;gap:6px">
-      <span style="color:${tint};font-size:11px">◆</span>
-      <span class="callout" style="flex:1">${name}</span>${dots(intensity,tint)}</div>
-    <div class="caption" style="margin-top:6px">${obs}</div>
-    <div class="body" style="margin-top:6px;font-size:14px">${interp}</div>
+      <span style="color:${tint};font-size:11px">${sym}</span>
+      <span class="callout" style="flex:1">${m.name}</span>${dots(m.i,tint)}</div>
+    <div class="caption" style="margin-top:6px">${m.obs}</div>
+    <div class="body" style="margin-top:6px;font-size:14px">${m.interp}</div>
     <div style="display:flex;gap:6px;margin-top:9px">
-      <span class="chip raised-sm" style="color:${ELEMENTS[el]}">${el[0].toUpperCase()+el.slice(1)}</span>
-      <span class="chip raised-sm" style="color:var(--gold)">${planet}</span></div>
+      ${m.el?`<span class="chip raised-sm" style="color:${ELEMENTS[m.el]}">${m.el[0].toUpperCase()+m.el.slice(1)}</span>`:""}
+      ${m.planet?`<span class="chip raised-sm" style="color:var(--gold)">${m.planet}</span>`:""}</div>
   </div>`;
 }
-function zoneCard(label, timeframe, summary, score, tint, expanded, markers){
+function zoneCard(z, expanded){
+  const tint = z.score<40?"#F97362":z.score<65?"#E7C56B":"#5EE7DF";
   return `<div class="zone ${expanded?'raised-lg':'raised'}">
-    <div class="head"><span class="t">${label}</span>
-      <span class="well recessed-sm" style="color:${tint}">${score}</span>
+    <div class="head"><span class="t">${z.label}</span>
+      <span class="well recessed-sm" style="color:${tint}">${z.score}</span>
       <span style="color:var(--dusk);font-size:11px;transform:rotate(${expanded?0:-90}deg);display:inline-block">▾</span></div>
-    <div class="caption" style="margin-top:5px">${timeframe}</div>
-    <div class="body" style="margin-top:6px">${summary}</div>
+    <div class="caption" style="margin-top:5px">${z.time}</div>
+    <div class="body" style="margin-top:6px">${z.summary}</div>
     <div class="track recessed" style="height:10px;margin-top:11px;padding:0 3px">
-      <i style="height:6px;width:${score*3.2}px;background:linear-gradient(90deg,${tint},${tint}99)"></i></div>
-    ${markers||""}</div>`;
+      <i style="height:6px;width:${z.score*3.2}px;background:linear-gradient(90deg,${tint},${tint}99)"></i></div>
+    ${expanded && z.markers ? z.markers.map(marker).join("") : ""}</div>`;
 }
-const result = `<div class="screen" id="s-result" style="--bloom:rgba(246,193,119,.28)">${stars(60,11)}
+function qualityNotice(q){
+  if(!q) return "";
+  return `<div class="glass" style="padding:15px;border-color:rgba(231,197,107,.32)">
+    <div style="display:flex;align-items:center;gap:7px">
+      <span style="color:var(--gold);font-size:12px">◎</span>
+      <span class="callout" style="color:var(--gold)">About this photo</span></div>
+    ${q.issues.map(i=>`<div class="caption" style="color:var(--moonlight);margin-top:7px">• ${i}</div>`).join("")}
+    <div class="caption" style="margin-top:6px">${q.suggestion}</div></div>`;
+}
+
+/* One result screen, four modalities. Copy is lifted verbatim from
+   Core/Utilities/SampleData.swift so the mockups show what the app ships. */
+function resultScreen(id, key, r){
+  const m = MODALITIES[key];
+  return `<div class="screen" id="${id}" style="--bloom:${m.g[0]}47">${stars(60,11)}
   <div style="position:relative">
-    ${statusbar()}${nav("Coffee Cup", BACK, SHARE)}
+    ${statusbar()}${nav(m.t, BACK, SHARE)}
     <div class="pad stack" style="gap:24px;margin-top:8px">
       <div class="stack" style="gap:12px">
-        <div class="hero recessed">
-          <div class="img" style="background:
-            radial-gradient(circle at 50% 45%, #efe6d8 0 33%, #d9c9b0 33% 40%, #8a6a4a 40% 43%, #33261c 43% 100%)">
-            <div class="pin" style="left:56%;top:11%;width:66px;height:52px"><span>Bird at the rim</span></div>
-            <div class="pin" style="left:28%;top:58%;width:130px;height:70px"><span>Heavy sediment</span></div>
-            <div class="fade"></div></div>
-        </div>
-        <div class="display">A bird at the rim, heavy sediment at the base</div>
+        <div class="hero recessed"><div class="img" style="background:${r.heroBg}">
+          ${r.heroArt||""}
+          ${(r.pins||[]).map(p=>`<div class="pin" style="left:${p.x};top:${p.y};width:${p.w};height:${p.h}"><span>${p.label}</span></div>`).join("")}
+          <div class="fade"></div></div></div>
+        <div class="display">${r.headline}</div>
       </div>
 
       <div class="glass" style="padding:18px">
         <div style="display:flex;gap:18px;align-items:center">
-          ${gauge(62,"#F6C177")}
+          ${gauge(r.energy, m.g[0])}
           <div class="stack" style="gap:5px">
             <div style="display:flex;align-items:center;gap:7px">
-              ${elGlyph("air", 20)}
-              <span class="headline">Air dominant</span></div>
-            <div class="caption">Thought &amp; exchange</div>
-            <span class="chip raised-sm" style="color:var(--gold);margin-top:4px;align-self:flex-start">confidence 71%</span>
+              ${elGlyph(r.dominant, 20)}
+              <span class="headline">${r.dominant[0].toUpperCase()+r.dominant.slice(1)} dominant</span></div>
+            <div class="caption">${r.keyword}</div>
+            <span class="chip raised-sm" style="color:var(--gold);margin-top:4px;align-self:flex-start">confidence ${r.confidence}%</span>
           </div>
         </div>
-        <div style="margin-top:16px">${balanceBar()}</div>
-        <div class="body" style="margin-top:15px">News is arriving before the underlying matter is settled. The clearest form in the cup is a winged shape right at the rim — a message or an arrival within days. But the base carries thick, dark sediment: whatever is being answered has roots that have not been worked through.</div>
+        <div style="margin-top:16px">${balanceBar(r.balance)}</div>
+        <div class="body" style="margin-top:15px">${r.summary}</div>
       </div>
 
+      ${qualityNotice(r.quality)}
+
       <div>
-        <div class="section"><div><div class="h">Around the cup</div>
-          <div class="caption" style="margin-top:2px">4 markers across 4 zones</div></div></div>
+        <div class="section"><div><div class="h">${r.zonesTitle}</div>
+          <div class="caption" style="margin-top:2px">${r.markerCount} markers across ${r.zones.length} zones</div></div></div>
         <div class="stack" style="gap:12px">
-          ${zoneCard("Rim — the next few days","Days","Active and favourable. Something is already on its way to you.",80,"#5EE7DF",true,
-            marker("Bird at the rim","A distinct winged shape with a narrow head sits on the rim at roughly two o'clock.",
-                   "News in motion. Arriving within days, and arriving toward you rather than requiring pursuit.",
-                   "air","☿ Mercury","#6EE7B7",5))}
-          ${zoneCard("Base — roots and outcomes","Months, and the underlying cause","Dense and unresolved. Do not force a conclusion from here yet.",35,"#F97362",false,"")}
+          ${r.zones.map((z,i)=>zoneCard(z, i===0)).join("")}
         </div>
       </div>
     </div>
   </div><div class="homebar"></div></div>`;
+}
+
+const result = resultScreen("s-result","coffee",{
+  headline:"A bird at the rim, heavy sediment at the base",
+  energy:62, confidence:71, dominant:"air", keyword:"Thought &amp; exchange",
+  balance:[["fire",18],["earth",30],["air",37],["water",15]],
+  zonesTitle:"Around the cup", markerCount:4,
+  heroBg:"radial-gradient(circle at 50% 45%, #efe6d8 0 33%, #d9c9b0 33% 40%, #8a6a4a 40% 43%, #33261c 43% 100%)",
+  pins:[{x:"56%",y:"11%",w:"66px",h:"52px",label:"Bird at the rim"},
+        {x:"28%",y:"58%",w:"130px",h:"70px",label:"Heavy sediment"}],
+  summary:"News is arriving before the underlying matter is settled. The clearest form in the cup is a winged shape right at the rim — a message or an arrival within days. But the base carries thick, dark sediment: whatever is being answered has roots that have not been worked through.",
+  zones:[
+    {label:"Rim — the next few days", time:"Days", score:80,
+     summary:"Active and favourable. Something is already on its way to you.",
+     markers:[{name:"Bird at the rim", pol:"supportive", i:5, el:"air", planet:"☿ Mercury",
+       obs:"A distinct winged shape with a narrow head sits on the rim at roughly two o'clock.",
+       interp:"News in motion. Arriving within days, and arriving toward you rather than requiring pursuit."}]},
+    {label:"Base — roots and outcomes", time:"Months, and the underlying cause", score:35,
+     summary:"Dense and unresolved. Do not force a conclusion from here yet."},
+  ],
+});
 
 /* ===========================================================================
    5 — History
@@ -545,4 +576,253 @@ const settings = `<div class="screen" id="s-settings">${stars(65,41)}
 
 document.getElementById("sheet").innerHTML =
   [home, capture, analysing, result, history, settings].join("");
+</script>
+
+<script>
+/* ===========================================================================
+   Mock subjects. Deliberately stylised rather than photorealistic — a mockup
+   that pretends to be a photograph reads as a bad photograph, whereas a clean
+   illustration reads as intentional. The palm in particular earns its keep:
+   its lines are exactly what the app marks up.
+   =========================================================================== */
+
+const FACE_ART_TPL = `<svg viewBox="0 0 240 240" __PAR__ style="__ARTSTYLE__">
+  <defs>
+    <linearGradient id="skin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#8a6a5c"/><stop offset="55%" stop-color="#6d5147"/>
+      <stop offset="100%" stop-color="#43322d"/></linearGradient>
+    <radialGradient id="keylight" cx="0.34" cy="0.24" r="0.7">
+      <stop offset="0%" stop-color="#fff" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="240" height="240" fill="#1b1520"/>
+  <!-- shoulders -->
+  <path d="M28 240c0-38 38-58 92-58s92 20 92 58z" fill="#2c2230"/>
+  <!-- neck + head -->
+  <path d="M104 150h32v34h-32z" fill="#54403a"/>
+  <ellipse cx="120" cy="104" rx="52" ry="66" fill="url(#skin)"/>
+  <ellipse cx="120" cy="104" rx="52" ry="66" fill="url(#keylight)"/>
+  <!-- hairline -->
+  <path d="M68 92a52 62 0 01104 0c-10-32-30-46-52-46S78 60 68 92z" fill="#241a20" opacity=".9"/>
+  <!-- brows -->
+  <path d="M92 92q12-7 24-1" stroke="#2e2028" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M124 91q12-6 24 1" stroke="#2e2028" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- eyes -->
+  <ellipse cx="103" cy="104" rx="9" ry="5.5" fill="#efe6df"/><circle cx="103" cy="104" r="3.4" fill="#2a1d18"/>
+  <ellipse cx="137" cy="104" rx="9" ry="5.5" fill="#efe6df"/><circle cx="137" cy="104" r="3.4" fill="#2a1d18"/>
+  <!-- nose + mouth -->
+  <path d="M120 110v16q-6 4-9 6" stroke="#4a352f" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+  <path d="M107 146q13 8 26 0" stroke="#3d2823" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- jaw shading, the marker the reading calls out -->
+  <path d="M80 128q6 40 40 42" stroke="#3a2a26" stroke-width="3" fill="none" opacity=".5"/>
+  <path d="M160 128q-6 40-40 42" stroke="#3a2a26" stroke-width="3" fill="none" opacity=".5"/>
+</svg>`;
+
+const PALM_ART_TPL = `<svg viewBox="0 0 240 240" __PAR__ style="__ARTSTYLE__">
+  <defs>
+    <linearGradient id="hand" x1="0.2" y1="0" x2="0.9" y2="1">
+      <stop offset="0%" stop-color="#a5806c"/><stop offset="60%" stop-color="#7d5c4d"/>
+      <stop offset="100%" stop-color="#4e3730"/></linearGradient>
+  </defs>
+  <rect width="240" height="240" fill="#191320"/>
+  <!-- palm + fingers -->
+  <path d="M78 236V132q0-16 8-26l4-6V54a9 9 0 0118 0v52h6V40a9 9 0 0118 0v66h6V48a9 9 0 0118 0v58h6V70a9 9 0 0118 0v78q0 50-34 76v12z"
+        fill="url(#hand)"/>
+  <!-- thumb / mount of Venus -->
+  <path d="M78 138q-22 4-28 26t6 40q10 16 22 20V138z" fill="#8b6857"/>
+  <ellipse cx="97" cy="174" rx="24" ry="30" fill="#9a745f" opacity=".28"/>
+  <!-- major lines -->
+  <g fill="none" stroke="#4a332b" stroke-linecap="round" opacity=".85">
+    <path d="M104 122q-22 22-20 62" stroke-width="4.5"/>            <!-- life -->
+    <path d="M100 132q34 8 58 30" stroke-width="4"/>                <!-- head, sloping -->
+    <path d="M104 112q34 2 60 14" stroke-width="3.6"/>              <!-- heart -->
+    <path d="M132 214q4-42 8-70" stroke-width="2.6" opacity=".7"/>  <!-- fate -->
+  </g>
+  <g fill="none" stroke="#3d2a23" stroke-width="1.6" opacity=".45">
+    <path d="M112 150q18 6 30 16"/><path d="M120 168q14 4 24 12"/>
+  </g>
+</svg>`;
+
+const ROOM_ART_TPL = `<svg viewBox="0 0 240 240" __PAR__ style="__ARTSTYLE__">
+  <defs>
+    <linearGradient id="daylight" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%" stop-color="#cfe4f5"/><stop offset="100%" stop-color="#7ba6c9"/></linearGradient>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b3546"/><stop offset="100%" stop-color="#241f2e"/></linearGradient>
+  </defs>
+  <rect width="240" height="240" fill="url(#wall)"/>
+  <!-- floor -->
+  <path d="M0 168h240v72H0z" fill="#2b2430"/>
+  <path d="M0 168h240v6H0z" fill="#171320" opacity=".7"/>
+  <!-- window, the room's good light -->
+  <rect x="150" y="44" width="74" height="86" rx="3" fill="url(#daylight)"/>
+  <rect x="150" y="44" width="74" height="86" rx="3" fill="none" stroke="#151220" stroke-width="4"/>
+  <path d="M187 44v86M150 87h74" stroke="#151220" stroke-width="3.5"/>
+  <path d="M150 130l-52 38h126l-40-38z" fill="#cfe4f5" opacity=".07"/>
+  <!-- desk against the far wall, chair with its back to the door -->
+  <rect x="128" y="150" width="96" height="8" rx="2" fill="#6b5340"/>
+  <rect x="134" y="158" width="6" height="30" fill="#4e3d30"/>
+  <rect x="212" y="158" width="6" height="30" fill="#4e3d30"/>
+  <rect x="156" y="128" width="42" height="24" rx="2" fill="#1d1a26" stroke="#3c3648" stroke-width="2"/>
+  <rect x="171" y="152" width="12" height="5" fill="#3c3648"/>
+  <ellipse cx="176" cy="196" rx="21" ry="7" fill="#241f2c"/>
+  <rect x="164" y="168" width="24" height="26" rx="5" fill="#332c3f"/>
+  <!-- doorway, behind the chair -->
+  <rect x="8" y="52" width="46" height="116" rx="2" fill="#15121e" stroke="#3c3648" stroke-width="3"/>
+  <!-- storage stacked at the room's centre -->
+  <rect x="82" y="146" width="34" height="24" rx="2" fill="#5b4a38"/>
+  <rect x="86" y="128" width="26" height="18" rx="2" fill="#6b5744"/>
+  <!-- plants on the sill -->
+  <path d="M228 130q-8-16 2-26 8 12 2 26z" fill="#4f8a5c"/>
+  <path d="M236 130q-6-12 2-20 6 9 2 20z" fill="#3f7a4c"/>
+  <!-- lamp -->
+  <circle cx="60" cy="150" r="12" fill="#E7C56B" opacity=".22"/>
+  <circle cx="60" cy="150" r="5" fill="#E7C56B" opacity=".85"/>
+  <rect x="58" y="155" width="4" height="34" fill="#3c3648"/>
+</svg>`;
+
+/* Fit modes. `hero` covers the wide result banner; `viewfinder` shows the whole
+   subject in a tall frame, scaled up so it sits inside the alignment guide. */
+function art(tpl, mode, scale = 1, shiftY = 0){
+  const base = "position:absolute;inset:0;width:100%;height:100%";
+  return mode === "hero"
+    ? tpl.replace("__PAR__", 'preserveAspectRatio="xMidYMid slice"').replace("__ARTSTYLE__", base)
+    : tpl.replace("__PAR__", 'preserveAspectRatio="xMidYMid meet"')
+         .replace("__ARTSTYLE__", `${base};transform:scale(${scale}) translateY(${shiftY}px);transform-origin:center`);
+}
+
+/* --- Capture screens, one per modality ------------------------------------ */
+function captureScreen(id, key, art, guide, tips){
+  const m = MODALITIES[key];
+  return `<div class="screen" id="${id}" style="--bloom:${m.g[0]}2e">
+    <div class="viewfinder" style="background:${key==="space"
+      ? 'linear-gradient(180deg,#3b3546 0%,#2a2436 40%,#241f2e 58.5%,#171320 59%,#2b2430 60%,#241d28 100%)'
+      : key==="palm" ? "#191320" : "#1b1520"}">${art}</div>
+    <div class="cutout" style="${guide};box-shadow:0 0 0 9999px rgba(0,0,0,.55)"></div>
+    <div class="guide" style="${guide};border-color:${m.g[0]};
+      box-shadow:0 0 22px ${m.g[0]}8c, inset 0 0 22px ${m.g[0]}2e"></div>
+    <div style="position:relative">
+      ${statusbar()}${nav(m.t, BACK, "")}
+      <div class="pad" style="margin-top:8px">
+        <div class="glass" style="padding:15px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div class="callout">${m.headline}</div>
+            <span style="color:var(--dusk);font-size:15px">✕</span></div>
+          <div class="stack" style="gap:6px;margin-top:9px">
+            ${tips.map(t=>`<div style="display:flex;gap:8px;align-items:flex-start">
+              <b style="width:4px;height:4px;border-radius:50%;background:${m.g[0]};margin-top:6px;flex:0 0 auto"></b>
+              <span class="caption" style="color:var(--moonlight)">${t}</span></div>`).join("")}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="shutter-bar">
+      <div class="ctl raised"><svg viewBox="0 0 24 24"><path d="M20 5H9.2L7.5 7H4a2 2 0 00-2 2v9a2 2 0 002 2h16a2 2 0 002-2V7a2 2 0 00-2-2zm-8 12.5A4.5 4.5 0 1116.5 13 4.5 4.5 0 0112 17.5z"/></svg></div>
+      <div class="collar recessed" style="background:linear-gradient(135deg,#1a1730,#0d0b1c);
+           box-shadow:inset 4px 4px 7px rgba(0,0,0,.9), inset -3px -3px 6px rgba(255,255,255,.10),
+                      -2px -2px 5px rgba(255,255,255,.06), 2px 3px 6px rgba(0,0,0,.6);
+           border:1px solid rgba(255,255,255,.07)">
+        <div class="shutter" style="background:linear-gradient(135deg,${m.g[0]} 0%,${m.g[0]} 32%,${m.g[1]} 100%);
+             box-shadow:-4px -4px 8px rgba(255,255,255,.22), 4px 5px 10px rgba(0,0,0,.75), 0 0 22px ${m.g[0]}73"></div>
+      </div>
+      <div class="ctl raised"><svg viewBox="0 0 24 24"><path d="M20 4h-3.2l-1.7-2H8.9L7.2 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm-8 13a5 5 0 115-5 5 5 0 01-5 5z"/></svg></div>
+    </div>
+    <div class="homebar"></div></div>`;
+}
+MODALITIES.face.headline   = "Center your face in the oval";
+MODALITIES.coffee.headline = "Shoot straight down into the cup";
+MODALITIES.palm.headline   = "Open your dominant palm fully";
+MODALITIES.space.headline  = "Frame the whole room or desk";
+
+/* Guide geometry mirrors ModalityType.guideShape. */
+const G_FACE  = "left:69px;top:calc(50% - 242px);width:292px;height:485px;border-radius:50%";
+const G_PALM  = "left:60px;top:calc(50% - 289px);width:310px;height:578px;border-radius:40px";
+const G_SPACE = "left:17px;top:calc(50% - 111px);width:396px;height:223px;border-radius:18px";
+
+const captureFace  = captureScreen("s-cap-face","face",  art(FACE_ART_TPL,"vf",1.45,10), G_FACE,
+  ["Use soft, even front lighting","Remove glasses and pull hair back","Neutral expression, eyes to camera"]);
+const capturePalm  = captureScreen("s-cap-palm","palm",  art(PALM_ART_TPL,"vf",1.25,0), G_PALM,
+  ["Use your dominant hand","Spread fingers slightly, palm flat","Avoid harsh shadows across the lines"]);
+const captureSpace = captureScreen("s-cap-space","space",art(ROOM_ART_TPL,"vf",1.0,0), G_SPACE,
+  ["Stand at the doorway or back wall","Include the floor, main furniture and any windows","Shoot in landscape for the widest field"]);
+
+/* --- Result screens, copy verbatim from SampleData.swift ------------------ */
+const resultFace = resultScreen("s-res-face","face",{
+  headline:"A Jupiter-bright brow over a set Mars jaw",
+  energy:68, confidence:78, dominant:"fire", keyword:"Drive &amp; initiation",
+  balance:[["fire",38],["earth",27],["air",22],["water",13]],
+  zonesTitle:"Zones of the face", markerCount:4,
+  heroBg:"#1b1520", heroArt:art(FACE_ART_TPL,"hero"),
+  pins:[{x:"24%",y:"8%",w:"52%",h:"18%",label:"Broad forehead"},
+        {x:"20%",y:"62%",w:"60%",h:"20%",label:"Held jaw"}],
+  summary:"The upper face carries most of the light here: a broad, unlined forehead reads as room to think and a genuine appetite for the long view. Below it, the jaw is held — Mars is doing work that the brow has not yet been asked to plan.",
+  zones:[
+    {label:"Forehead — Jupiter's field", time:"Vision and the coming season", score:82,
+     summary:"Open and bright. The best decisions today are the ones made at altitude.",
+     markers:[{name:"Broad, unlined forehead", pol:"supportive", i:4, el:"fire", planet:"♃ Jupiter",
+       obs:"The forehead is wide and high with no strong horizontal creasing, evenly lit across its width.",
+       interp:"Jupiter's zone is open. Expansive thinking, teaching instinct, and a natural pull toward the long horizon."},
+      {name:"Held jaw line", pol:"challenging", i:3, el:"earth", planet:"♂ Mars",
+       obs:"The masseter is visibly engaged and the jaw line is sharply defined even at rest.",
+       interp:"Mars is storing effort here. Endurance is available, but it is being spent on holding rather than moving."}]},
+    {label:"Eyes — Sun and Moon", time:"Present vitality", score:55,
+     summary:"Solar output steady, lunar replenishment overdrawn."},
+    {label:"Jaw — Mars and Saturn", time:"Where effort is stored", score:44,
+     summary:"Tension held rather than discharged. This is the release point."},
+  ],
+});
+
+const resultPalm = resultScreen("s-res-palm","palm",{
+  headline:"An air hand with a deep, sloping head line",
+  energy:73, confidence:74, dominant:"air", keyword:"Thought &amp; exchange",
+  balance:[["fire",17],["earth",21],["air",44],["water",18]],
+  zonesTitle:"Lines and mounts", markerCount:5,
+  heroBg:"#191320", heroArt:art(PALM_ART_TPL,"hero"),
+  pins:[{x:"22%",y:"42%",w:"50%",h:"16%",label:"Head line"},
+        {x:"14%",y:"64%",w:"32%",h:"22%",label:"Mount of Venus"}],
+  summary:"A square palm with long fingers puts this hand firmly in the air family — thought, language and exchange are the native medium here. The head line is both deep and sloping, an unusual pairing: sustained focus applied to imaginative rather than literal material.",
+  zones:[
+    {label:"Head line — how you think", time:"Current method", score:80,
+     summary:"Deep and sloping: sustained attention on imaginative material.",
+     markers:[{name:"Deep, sloping head line", pol:"supportive", i:4, el:"air", planet:"☿ Mercury",
+       obs:"The head line is clearly incised and angles down toward the outer palm.",
+       interp:"Focus applied to imaginative material. Depth says stamina of attention; the slope says it prefers the associative over the literal."},
+      {name:"Square palm, long fingers", pol:"supportive", i:5, el:"air", planet:"☿ Mercury",
+       obs:"The palm is approximately as wide as it is long, with fingers longer than the palm's height.",
+       interp:"An air hand: analysis, language and exchange are where this hand does its best work."}]},
+    {label:"Life line — vitality and room", time:"Constitution", score:78,
+     summary:"Wide arc, unbroken. A steady base underneath the rest."},
+    {label:"Heart line — how you attach", time:"Emotional season", score:62,
+     summary:"Contained and loyal. Warmth is present but not performed."},
+  ],
+});
+
+const resultSpace = resultScreen("s-res-space","space",{
+  headline:"Good light, wrong chair — the desk has no back support",
+  energy:58, confidence:69, dominant:"earth", keyword:"Structure &amp; endurance",
+  balance:[["fire",28],["earth",34],["air",16],["water",22]],
+  zonesTitle:"Through the room", markerCount:5,
+  heroBg:"#241f2e", heroArt:art(ROOM_ART_TPL,"hero"),
+  pins:[{x:"55%",y:"34%",w:"40%",h:"40%",label:"Desk faces wall"},
+        {x:"33%",y:"52%",w:"22%",h:"22%",label:"Centre storage"}],
+  quality:{issues:["The north-east corner is cropped out of frame"],
+           suggestion:"Re-shoot from the doorway to include all four corners."},
+  summary:"The room has genuine wood and fire energy: plants near the window and warm lamp light carry most of the vitality here. The critical issue is the workstation — the chair faces a wall with the door behind it and a window at the occupant's back.",
+  zones:[
+    {label:"Workstation — command position", time:"Daily working state", score:30,
+     summary:"Back to the door with a window behind. The single highest-value fix in the room.",
+     markers:[{name:"Desk faces wall, back to the door", pol:"challenging", i:5, el:"earth", planet:"♄ Saturn",
+       obs:"The desk is pushed against the far wall; the chair's back is to the visible doorway with a window behind it.",
+       interp:"The reverse of the command position. Reads as chronic low-grade vigilance and missing solid backing for one's work."}]},
+    {label:"Centre — the brahmasthan", time:"The room's core", score:38,
+     summary:"Loaded with storage. Clearing it changes how the whole space circulates."},
+    {label:"Greenery — wood phase", time:"Growth and air", score:84,
+     summary:"Healthy and well-placed. The room's best asset."},
+  ],
+});
+
+document.getElementById("sheet").innerHTML = [
+  home, capture, analysing, result, history, settings,
+  captureFace, resultFace, capturePalm, resultPalm, captureSpace, resultSpace,
+].join("");
 </script>

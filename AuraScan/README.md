@@ -59,16 +59,34 @@ the SwiftUI build cannot drift apart silently.
 
 ### Screens
 
-| | | |
-|---|---|---|
-| ![Dashboard](Design/Screens/01-dashboard.png) | ![Capture](Design/Screens/02-capture.png) | ![Analysing](Design/Screens/03-analysing.png) |
-| Dashboard | Capture | Analysing |
-| ![Reading](Design/Screens/04-reading.png) | ![History](Design/Screens/05-history.png) | ![Settings](Design/Screens/06-settings.png) |
-| Reading | History | Settings |
+Capture and result are shown for all four modalities, since the guide overlay,
+the accent theming and the zone vocabulary all change per modality.
 
-These are **design mockups, not simulator captures** — they were rendered from
+**Shared flow**
+
+| | | | |
+|---|---|---|---|
+| ![Dashboard](Design/Screens/01-dashboard.png) | ![Analysing](Design/Screens/03-analysing.png) | ![History](Design/Screens/05-history.png) | ![Settings](Design/Screens/06-settings.png) |
+| Dashboard | Analysing | History | Settings |
+
+**Per modality — capture, then reading**
+
+| | | | |
+|---|---|---|---|
+| ![Face capture](Design/Screens/07-capture-face.png) | ![Face reading](Design/Screens/08-reading-face.png) | ![Coffee capture](Design/Screens/02-capture.png) | ![Coffee reading](Design/Screens/04-reading.png) |
+| Face — oval guide | Face — reading | Coffee — circle guide | Coffee — reading |
+| ![Palm capture](Design/Screens/09-capture-palm.png) | ![Palm reading](Design/Screens/10-reading-palm.png) | ![Space capture](Design/Screens/11-capture-space.png) | ![Space reading](Design/Screens/12-reading-space.png) |
+| Palm — hand guide | Palm — reading | Space — wide frame | Space — reading, with image-quality notice |
+
+Guide geometry in the mockups mirrors `ModalityType.guideShape`, and every
+reading's copy is lifted verbatim from `Core/Utilities/SampleData.swift`, so the
+screens show what the app actually ships rather than invented marketing text.
+
+These are **design mockups, not simulator captures** — rendered from
 `Design/Screens/mockups.html` via headless Chromium at 1290×2796 (an exact App
-Store 6.9" screenshot size). Regenerate them with:
+Store 6.9" screenshot size). The subjects (face, palm, room) are stylised SVG
+illustrations: a mockup that pretends to be a photograph reads as a bad
+photograph. Regenerate with:
 
 ```bash
 cd Design/Screens && node shoot.mjs

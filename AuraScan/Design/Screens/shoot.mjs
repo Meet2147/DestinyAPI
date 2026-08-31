@@ -7,6 +7,12 @@ const SCREENS = [
   ['s-result',    '04-reading'],
   ['s-history',   '05-history'],
   ['s-settings',  '06-settings'],
+  ['s-cap-face',  '07-capture-face'],
+  ['s-res-face',  '08-reading-face'],
+  ['s-cap-palm',  '09-capture-palm'],
+  ['s-res-palm',  '10-reading-palm'],
+  ['s-cap-space', '11-capture-space'],
+  ['s-res-space', '12-reading-space'],
 ];
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
