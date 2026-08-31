@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    AuraScan app icon — an aura orb held inside four capture brackets.
+    The brackets deliberately echo CaptureGuideOverlay, so the icon and the
+    viewfinder read as the same product. Everything is built from full-bleed
+    shapes with no strokes under 12px at 1024, so the mark survives 40pt.
+  -->
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%"   stop-color="#241F4A"/>
+      <stop offset="45%"  stop-color="#131029"/>
+      <stop offset="100%" stop-color="#07060F"/>
+    </linearGradient>
+
+    <radialGradient id="orbGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%"   stop-color="#8B5CF6" stop-opacity="1"/>
+      <stop offset="55%"  stop-color="#8B5CF6" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="orb" x1="0.2" y1="0" x2="0.85" y2="1">
+      <stop offset="0%"   stop-color="#F7E7B8"/>
+      <stop offset="38%"  stop-color="#E7C56B"/>
+      <stop offset="100%" stop-color="#C77BE0"/>
+    </linearGradient>
+
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#5EE7DF"/>
+      <stop offset="55%"  stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.25"/>
+    </linearGradient>
+
+    <linearGradient id="bracket" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#F4F1FF"/>
+      <stop offset="100%" stop-color="#B9B2D9"/>
+    </linearGradient>
+
+    <radialGradient id="topLight" cx="0.32" cy="0.2" r="0.75">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.13"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Ground. Square: iOS applies its own mask. -->
+  <rect width="1024" height="1024" fill="url(#ground)"/>
+  <rect width="1024" height="1024" fill="url(#topLight)"/>
+
+  <!-- Star field, sparse enough to survive downscaling. -->
+  <g fill="#FFFFFF">
+    <circle cx="180" cy="176" r="5"   opacity="0.55"/>
+    <circle cx="846" cy="226" r="6.5" opacity="0.45"/>
+    <circle cx="806" cy="806" r="5"   opacity="0.4"/>
+    <circle cx="214" cy="838" r="4"   opacity="0.35"/>
+    <circle cx="512" cy="132" r="3.5" opacity="0.3"/>
+    <circle cx="132" cy="520" r="3.5" opacity="0.28"/>
+    <circle cx="898" cy="520" r="3.5" opacity="0.28"/>
+  </g>
+
+  <!-- Aura bloom behind the orb. -->
+  <circle cx="512" cy="512" r="330" fill="url(#orbGlow)"/>
+
+  <!-- Aura rings: two concentric arcs, opening to the lower right so the mark
+       has direction rather than being perfectly symmetric. -->
+  <circle cx="512" cy="512" r="240" fill="none" stroke="url(#ring)" stroke-width="30"
+          stroke-linecap="round" stroke-dasharray="1132 376" transform="rotate(-128 512 512)" opacity="0.95"/>
+  <circle cx="512" cy="512" r="172" fill="none" stroke="url(#ring)" stroke-width="24"
+          stroke-linecap="round" stroke-dasharray="811 270" transform="rotate(44 512 512)" opacity="0.72"/>
+
+  <!-- The orb. -->
+  <circle cx="512" cy="512" r="120" fill="url(#orb)"/>
+  <!-- Specular highlight, top-left, matching the app's light source. -->
+  <ellipse cx="472" cy="466" rx="47" ry="36" fill="#FFFFFF" opacity="0.42" transform="rotate(-28 474 470)"/>
+
+  <!-- Capture brackets. Drawn as filled paths, not strokes, so corner joins
+       stay sharp at every raster size. -->
+  <g fill="url(#bracket)">
+    <!-- top-left -->
+    <path d="M148 288 a26 26 0 0 1 26-26 h128 a26 26 0 0 1 0 52 h-102 v102 a26 26 0 0 1-52 0 z"/>
+    <!-- top-right -->
+    <path d="M876 288 a26 26 0 0 0-26-26 h-128 a26 26 0 0 0 0 52 h102 v102 a26 26 0 0 0 52 0 z"/>
+    <!-- bottom-left -->
+    <path d="M148 736 a26 26 0 0 0 26 26 h128 a26 26 0 0 0 0-52 h-102 v-102 a26 26 0 0 0-52 0 z"/>
+    <!-- bottom-right -->
+    <path d="M876 736 a26 26 0 0 1-26 26 h-128 a26 26 0 0 1 0-52 h102 v-102 a26 26 0 0 1 52 0 z"/>
+  </g>
+</svg>

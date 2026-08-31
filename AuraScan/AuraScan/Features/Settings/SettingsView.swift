@@ -117,10 +117,7 @@ struct SettingsView: View {
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .padding(Theme.Spacing.sm)
-                            .background(
-                                RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                                    .fill(Theme.Palette.void.opacity(0.6))
-                            )
+                            .softRecessedField()
 
                         Button("Save key") { saveKey() }
                             .buttonStyle(AuraButtonStyle())
@@ -160,10 +157,7 @@ struct SettingsView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .padding(Theme.Spacing.sm)
-                        .background(
-                            RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                                .fill(Theme.Palette.void.opacity(0.6))
-                        )
+                        .softRecessedField()
                         .onSubmit { commitModel(environment: environment) }
 
                     HStack(spacing: Theme.Spacing.sm) {

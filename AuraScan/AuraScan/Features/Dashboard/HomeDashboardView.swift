@@ -105,14 +105,7 @@ struct HomeDashboardView: View {
                     .foregroundStyle(Theme.Palette.dusk)
             }
             .padding(Theme.Spacing.sm)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
-                    .fill(Theme.Palette.gold.opacity(0.1))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
-                    .strokeBorder(Theme.Palette.gold.opacity(0.32), lineWidth: 1)
-            )
+            .softRaisedCard(cornerRadius: Theme.Radius.medium, depth: .subtle, tint: Theme.Palette.gold)
         }
         .buttonStyle(.plain)
     }
@@ -202,19 +195,26 @@ struct ModalityCard: View {
     let modality: ModalityType
     let action: () -> Void
 
+    @State private var isPressed = false
+
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                // The medallion is the card's one strongly extruded element —
+                // it is what makes the tile read as a physical button.
                 ZStack {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: modality.gradient.map { $0.opacity(0.9) },
+                                colors: modality.gradient.map { $0.opacity(0.92) },
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 44, height: 44)
+                        .frame(width: 46, height: 46)
+                        .shadow(color: SoftDepth.highlight, radius: 6, x: -3, y: -3)
+                        .shadow(color: SoftDepth.shade, radius: 8, x: 4, y: 5)
+                        .shadow(color: modality.accent.opacity(0.4), radius: 12, y: 4)
                     Image(systemName: modality.systemImage)
                         .font(.system(size: 19, weight: .semibold))
                         .foregroundStyle(Theme.Palette.void)
@@ -235,24 +235,12 @@ struct ModalityCard: View {
             }
             .frame(maxWidth: .infinity, minHeight: 168, alignment: .leading)
             .padding(Theme.Spacing.md)
-            .background {
-                RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-                    .fill(Theme.Palette.surface.opacity(0.8))
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [modality.accent.opacity(0.5), .white.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
+            .softRaisedCard(depth: .pronounced, tint: modality.accent, isPressed: isPressed)
         }
         .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.98 : 1)
+        .animation(.spring(duration: 0.22), value: isPressed)
+        .onLongPressGesture(minimumDuration: 0, pressing: { isPressed = $0 }, perform: {})
         .accessibilityLabel(modality.title)
         .accessibilityHint(modality.subtitle)
     }
@@ -287,20 +275,11 @@ struct ReadingRow: View {
                 Image(systemName: reading.dominantElement.systemImage)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(reading.dominantElement.color)
-                Text("\(reading.energyScore)")
-                    .font(Theme.Font.mono)
-                    .foregroundStyle(Theme.Palette.moonlight)
+                ValueWell(text: "\(reading.energyScore)")
             }
         }
         .padding(Theme.Spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
-                .fill(Theme.Palette.surface.opacity(0.55))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
-                .strokeBorder(.white.opacity(0.06), lineWidth: 1)
-        )
+        .softRaisedCard(cornerRadius: Theme.Radius.medium, depth: .subtle, tint: reading.modality.accent)
     }
 
     @ViewBuilder
@@ -325,6 +304,7 @@ struct ReadingRow: View {
         }
         .frame(width: 48, height: 48)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous))
+        .softRecessed(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous), depth: .subtle)
     }
 }
 

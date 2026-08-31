@@ -1,0 +1,548 @@
+<title>AuraScan — Soft Depth Screens</title>
+<style>
+/* ---------------------------------------------------------------------------
+   Design tokens — mirrored 1:1 from Theme.swift / SoftDepth.swift so these
+   mockups and the SwiftUI build cannot drift apart silently.
+   --------------------------------------------------------------------------- */
+:root{
+  --void:#07060F; --deep:#0F0D1F; --nebula:#191634;
+  --surface:#1E1B3A;
+  --raised-top:#2A2551; --raised-bottom:#1B1836;
+  --recessed:#161331; --recessed-deep:#100E24;
+
+  --starlight:#F4F1FF; --moonlight:#B9B2D9; --dusk:#7C7499;
+  --gold:#E7C56B; --aura:#8B5CF6; --glow:#5EE7DF;
+
+  --fire:#F97362; --earth:#84CC91; --air:#A5B4FC; --water:#5EC8E5;
+
+  /* SoftDepth.highlight / .shade */
+  --hi:rgba(255,255,255,.10);
+  --sh:rgba(0,0,0,.66);
+  --inner-sh:rgba(0,0,0,.78);
+  --inner-hi:rgba(255,255,255,.07);
+
+  --r-sm:12px; --r-md:20px; --r-lg:28px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+body{background:#0b0a14;font-family:Inter,system-ui,sans-serif}
+
+/* Device frame: 430x932 CSS px == iPhone 6.9" logical. At deviceScaleFactor 3
+   each capture lands on 1290x2796, an exact App Store screenshot size. */
+.screen{
+  position:relative;width:430px;height:932px;overflow:hidden;
+  background:linear-gradient(180deg,var(--void) 0%,var(--deep) 46%,var(--nebula) 100%);
+  color:var(--starlight);
+}
+.screen::before{ /* accent bloom, top-right */
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(420px 420px at 86% 8%, var(--bloom,rgba(139,92,246,.35)), transparent 70%),
+             radial-gradient(360px 360px at 10% 86%, rgba(94,231,223,.16), transparent 70%);
+}
+.stars{position:absolute;inset:0;pointer-events:none}
+.stars i{position:absolute;background:#fff;border-radius:50%}
+
+/* --- Soft Depth primitives ------------------------------------------------ */
+.raised{
+  background:linear-gradient(135deg,var(--raised-top),var(--raised-bottom));
+  box-shadow:-5px -5px 9px var(--hi), 5px 6px 9px var(--sh);
+  border:1px solid rgba(255,255,255,.10);
+}
+.raised-sm{
+  background:linear-gradient(135deg,var(--raised-top),var(--raised-bottom));
+  box-shadow:-2.5px -2.5px 5px var(--hi), 2.5px 3px 5px var(--sh);
+  border:1px solid rgba(255,255,255,.09);
+}
+.raised-lg{
+  background:linear-gradient(135deg,var(--raised-top),var(--raised-bottom));
+  box-shadow:-8px -8px 16px var(--hi), 8px 9px 16px var(--sh);
+  border:1px solid rgba(255,255,255,.12);
+}
+.recessed{
+  background:linear-gradient(135deg,var(--recessed),var(--recessed-deep));
+  box-shadow:inset 3px 3px 5px var(--inner-sh), inset -3px -3px 5px var(--inner-hi);
+  border:1px solid rgba(0,0,0,.35);
+}
+.recessed-sm{
+  background:linear-gradient(135deg,var(--recessed),var(--recessed-deep));
+  box-shadow:inset 1.5px 1.5px 3px var(--inner-sh), inset -1.5px -1.5px 3px var(--inner-hi);
+  border:1px solid rgba(0,0,0,.3);
+}
+/* Glass is reserved for content you read, never for controls. */
+.glass{
+  background:rgba(30,27,58,.72);backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,.10);border-radius:var(--r-lg);
+}
+
+/* --- Type ----------------------------------------------------------------- */
+.eyebrow{font:600 11px/1 Inter;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.display{font:600 33px/1.12 Fraunces,serif;letter-spacing:-.01em}
+.title{font:600 23px/1.2 Fraunces,serif}
+.headline{font:600 17px/1.3 Inter}
+.body{font:400 15px/1.5 Inter;color:var(--moonlight)}
+.callout{font:500 14px/1.35 Inter}
+.caption{font:500 12px/1.4 Inter;color:var(--dusk)}
+.mono{font:500 12px/1 ui-monospace,"DejaVu Sans Mono",monospace}
+
+.pad{padding:0 18px}
+.stack{display:flex;flex-direction:column}
+
+/* --- Status / nav bars ---------------------------------------------------- */
+.statusbar{position:relative;display:flex;justify-content:space-between;align-items:center;
+  height:54px;padding:14px 26px 0;font:600 15px Inter;color:var(--starlight)}
+.statusbar .icons{display:flex;gap:6px;align-items:center;opacity:.95}
+.navbar{position:relative;display:flex;align-items:center;justify-content:center;height:44px;
+  font:600 16px Inter;color:var(--starlight)}
+.navbar .left,.navbar .right{position:absolute;top:50%;transform:translateY(-50%);
+  display:grid;place-items:center;width:34px;height:34px;border-radius:50%;color:var(--starlight)}
+.navbar .left{left:16px} .navbar .right{right:16px}
+.homebar{position:absolute;left:50%;bottom:9px;transform:translateX(-50%);
+  width:140px;height:5px;border-radius:3px;background:rgba(255,255,255,.35)}
+
+/* --- Dashboard ------------------------------------------------------------ */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{border-radius:var(--r-lg);padding:18px;height:172px;display:flex;flex-direction:column}
+.medallion{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
+  box-shadow:-3px -3px 6px var(--hi), 4px 5px 8px var(--sh), 0 4px 12px var(--med-glow,transparent)}
+.medallion svg{width:22px;height:22px;fill:#07060F}
+.tile .t{margin-top:auto;font:600 16px/1.25 Inter}
+.tile .s{margin-top:5px;font:500 11.5px/1.35 Inter;color:var(--dusk)}
+
+.row{display:flex;align-items:center;gap:12px;border-radius:var(--r-md);padding:11px}
+.thumb{width:48px;height:48px;border-radius:var(--r-sm);flex:0 0 auto;display:grid;place-items:center}
+.thumb svg{width:18px;height:18px;fill:rgba(7,6,15,.82)}
+.row .meta{flex:1;min-width:0}
+.row .h{font:500 13.5px/1.3 Inter;color:var(--starlight);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.row .sub{margin-top:3px;font:500 11px Inter;color:var(--dusk)}
+.well{border-radius:999px;padding:4px 9px;font:500 12px/1 ui-monospace,monospace}
+
+.section{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.section .h{font:600 17px Inter}
+.section .a{font:500 14px Inter;color:var(--aura)}
+
+/* --- Chips / buttons ------------------------------------------------------ */
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 10px;
+  font:500 12px/1 Inter}
+.btn{display:grid;place-items:center;border-radius:999px;height:52px;font:600 17px Inter;
+  color:var(--void)}
+.btn.secondary{color:var(--starlight)}
+
+/* --- Capture -------------------------------------------------------------- */
+.viewfinder{position:absolute;inset:0}
+.vf-photo{position:absolute;inset:0;background:var(--vf,#241d18)}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+.cutout{position:absolute;border-radius:50%;box-shadow:0 0 0 9999px rgba(0,0,0,.55)}
+.guide{position:absolute;border:2px solid transparent;border-radius:50%}
+.shutter-bar{position:absolute;left:0;right:0;bottom:34px;display:flex;align-items:center;
+  justify-content:center;gap:28px}
+.collar{width:82px;height:82px;border-radius:50%;display:grid;place-items:center}
+.shutter{width:62px;height:62px;border-radius:50%;
+  box-shadow:-3px -3px 6px var(--hi), 3px 4px 8px var(--sh), 0 0 16px var(--sh-glow,transparent)}
+.ctl{width:52px;height:52px;border-radius:50%;display:grid;place-items:center}
+.ctl svg{width:21px;height:21px;fill:var(--starlight)}
+
+/* --- Analysing ------------------------------------------------------------ */
+.orbits{position:relative;width:190px;height:190px;margin:0 auto}
+.orbits .ring{position:absolute;inset:0;border-radius:50%;border:2.5px solid transparent}
+.core{position:absolute;inset:53px;border-radius:50%}
+
+/* --- Result --------------------------------------------------------------- */
+.hero{position:relative;border-radius:34px;padding:6px}
+.hero .img{height:236px;border-radius:var(--r-lg);position:relative;overflow:hidden;
+  background:var(--hero,#2a211a)}
+.hero .fade{position:absolute;left:0;right:0;bottom:0;height:92px;
+  background:linear-gradient(180deg,transparent,rgba(7,6,15,.88))}
+.pin{position:absolute;border:1.5px solid var(--aura);border-radius:8px}
+.pin span{position:absolute;top:-11px;left:0;white-space:nowrap;background:var(--aura);
+  color:var(--void);font:600 9px/1 Inter;padding:3px 5px;border-radius:999px}
+
+.gauge{position:relative;width:88px;height:88px;flex:0 0 auto}
+.gauge .well{position:absolute;inset:4px;border-radius:50%;padding:0}
+.gauge svg{position:absolute;inset:0}
+.gauge .num{position:absolute;inset:0;display:grid;place-items:center;text-align:center;line-height:1}
+
+.track{height:14px;border-radius:999px;padding:0 4px;display:flex;align-items:center;gap:2px}
+.track i{height:8px;border-radius:999px;box-shadow:0 1px 2px rgba(0,0,0,.5)}
+.legend{display:flex;gap:12px;margin-top:10px}
+.legend span{display:flex;align-items:center;gap:5px;font:500 11.5px Inter;color:var(--moonlight)}
+.legend b{width:7px;height:7px;border-radius:50%;display:block}
+
+.zone{border-radius:var(--r-lg);padding:16px}
+.zone .head{display:flex;align-items:baseline;gap:8px}
+.zone .head .t{font:600 17px Inter;flex:1}
+.marker{border-radius:var(--r-md);padding:12px;margin-top:10px}
+.dots{display:flex;gap:2px;align-items:center}
+.dots i{width:6px;height:6px;border-radius:50%;display:block}
+
+.filterbar{display:flex;gap:6px;padding:12px 18px;background:rgba(25,22,52,.72);
+  backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.05)}
+.pill{border-radius:999px;padding:9px 15px;font:500 14px/1 Inter;white-space:nowrap}
+
+.field{border-radius:var(--r-sm);padding:12px;font:500 13px ui-monospace,monospace;color:var(--starlight)}
+</style>
+
+<script>
+/* Screens are generated rather than hand-written so the shared primitives stay
+   consistent across all six. */
+const MODALITIES = {
+  face:   {t:"Face Reading",   s:"Physiognomy & planetary rulers", g:["#F9A8D4","#8B5CF6"],
+           icon:"M12 2a10 10 0 100 20 10 10 0 000-20zm-3.5 8a1.3 1.3 0 110-2.6 1.3 1.3 0 010 2.6zm7 0a1.3 1.3 0 110-2.6 1.3 1.3 0 010 2.6zM12 18a5 5 0 01-4.3-2.5h8.6A5 5 0 0112 18z"},
+  coffee: {t:"Coffee Cup",     s:"Tasseography & symbol flow",     g:["#F6C177","#9A3412"],
+           icon:"M4 5h13v7a5 5 0 01-5 5H9a5 5 0 01-5-5V5zm14 1h1.6a2.9 2.9 0 010 5.8H18V6zM3 19h15v2H3z"},
+  palm:   {t:"Palm Reading",   s:"Chiromancy & elemental hands",   g:["#6EE7B7","#0E7490"],
+           icon:"M11 2a1.2 1.2 0 012.4 0v7h.8V3.4a1.2 1.2 0 012.4 0V9h.8V5.4a1.2 1.2 0 012.4 0V14a8 8 0 01-8 8 8 8 0 01-8-8v-1.6a1.3 1.3 0 012.6 0V14h.8V4.2a1.2 1.2 0 012.4 0V9h.8z"},
+  space:  {t:"Space & Energy", s:"Feng Shui & Vastu balance",      g:["#93C5FD","#4338CA"],
+           icon:"M3 3h8v8H3V3zm10 0h8v5h-8V3zM3 13h8v8H3v-8zm10 3h8v5h-8v-5zm0-6h8v4h-8v-4z"}
+};
+const ELEMENTS = {fire:"#F97362",earth:"#84CC91",air:"#A5B4FC",water:"#5EC8E5"};
+// Classic alchemical marks, drawn rather than typed: fire △, water ▽,
+// air △ with a bar, earth ▽ with a bar.
+function elGlyph(el, size){
+  const c = ELEMENTS[el], sw = 1.6;
+  const up = "M12 3.5 21 19.5H3z", down = "M12 20.5 3 4.5h18z";
+  const bar = {air:"M7.2 14.4h9.6", earth:"M7.2 9.6h9.6"}[el] || "";
+  const tri = (el==="fire"||el==="air") ? up : down;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"
+    stroke="${c}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round">
+    <path d="${tri}"/>${bar?`<path d="${bar}"/>`:""}</svg>`;
+}
+
+function stars(n, seed){
+  let s = seed, out = "";
+  const rnd = () => (s = (s*1103515245+12345) & 0x7fffffff) / 0x7fffffff;
+  for(let i=0;i<n;i++){
+    const r=(0.5+rnd()*1.3).toFixed(1);
+    out += `<i style="left:${(rnd()*100).toFixed(1)}%;top:${(rnd()*100).toFixed(1)}%;
+             width:${r*2}px;height:${r*2}px;opacity:${(0.15+rnd()*0.5).toFixed(2)}"></i>`;
+  }
+  return `<div class="stars">${out}</div>`;
+}
+function statusbar(){
+  return `<div class="statusbar"><span>9:41</span><span class="icons">
+    <svg width="18" height="12" viewBox="0 0 18 12" fill="#F4F1FF"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+    <svg width="17" height="12" viewBox="0 0 17 12" fill="#F4F1FF"><path d="M8.5 11.2 6.2 8.8a3.3 3.3 0 014.6 0zM3.6 6.2 2 4.6a9.2 9.2 0 0113 0l-1.6 1.6a6.9 6.9 0 00-9.8 0z"/></svg>
+    <svg width="26" height="12" viewBox="0 0 26 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3.2" fill="none" stroke="rgba(244,241,255,.5)"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#F4F1FF"/><path d="M23.5 4v4a2.1 2.1 0 000-4z" fill="rgba(244,241,255,.5)"/></svg>
+  </span></div>`;
+}
+function nav(title, left, right){
+  return `<div class="navbar">${left?`<div class="left raised-sm" style="border-radius:50%">${left}</div>`:""}
+    <span>${title}</span>${right?`<div class="right raised-sm" style="border-radius:50%">${right}</div>`:""}</div>`;
+}
+const BACK = `<svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="#F4F1FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1 2 8l6 7"/></svg>`;
+const SLIDERS = `<svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="#F4F1FF" stroke-width="1.7" stroke-linecap="round"><path d="M2 4.5h13M2 12.5h13"/><circle cx="6" cy="4.5" r="2" fill="#1B1836"/><circle cx="11" cy="12.5" r="2" fill="#1B1836"/></svg>`;
+const SHARE = `<svg width="15" height="17" viewBox="0 0 15 17" fill="none" stroke="#F4F1FF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 11V1.8M4.3 4.8 7.5 1.5l3.2 3.3M2 8.5v6.2h11V8.5"/></svg>`;
+</script>
+
+<div id="sheet"></div>
+
+<script>
+/* ===========================================================================
+   1 — Home dashboard
+   =========================================================================== */
+function tile(key){
+  const m = MODALITIES[key];
+  return `<div class="tile raised-lg" style="--med-glow:${m.g[0]}66">
+    <div class="medallion" style="background:linear-gradient(135deg,${m.g[0]},${m.g[1]});--med-glow:${m.g[0]}66">
+      <svg viewBox="0 0 24 24"><path d="${m.icon}"/></svg>
+    </div>
+    <div class="t">${m.t}</div><div class="s">${m.s}</div>
+  </div>`;
+}
+function row(key, headline, ago, score, el){
+  const m = MODALITIES[key];
+  return `<div class="row raised-sm">
+    <div class="thumb recessed-sm" style="background:linear-gradient(135deg,${m.g[0]},${m.g[1]})">
+      <svg viewBox="0 0 24 24"><path d="${m.icon}"/></svg></div>
+    <div class="meta"><div class="h">${headline}</div>
+      <div class="sub">${m.t} · ${ago}</div></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+      ${elGlyph(el, 15)}
+      <div class="well recessed-sm" style="color:var(--moonlight)">${score}</div>
+    </div></div>`;
+}
+const home = `<div class="screen" id="s-home">${stars(70,7)}
+  <div style="position:relative">
+    ${statusbar()}
+    <div class="navbar"><span></span><div class="right raised-sm" style="border-radius:50%">${SLIDERS}</div></div>
+    <div class="pad stack" style="gap:26px;margin-top:10px">
+      <div class="stack" style="gap:7px">
+        <div class="eyebrow">AuraScan</div>
+        <div class="display">Good evening</div>
+        <div class="body">The field is quiet. What would you like to read?</div>
+      </div>
+      <div class="grid">${["face","coffee","palm","space"].map(tile).join("")}</div>
+      <div>
+        <div class="section"><div class="h">Recent readings</div><div class="a">See all</div></div>
+        <div class="stack" style="gap:10px">
+          ${row("coffee","A bird at the rim, heavy sediment at the base","2 hours ago",62,"air")}
+          ${row("face","A Jupiter-bright brow over a set Mars jaw","yesterday",68,"fire")}
+          ${row("space","Good light, wrong chair — the desk has no back support","3 days ago",58,"earth")}
+        </div>
+      </div>
+    </div>
+  </div><div class="homebar"></div></div>`;
+
+/* ===========================================================================
+   2 — Capture (coffee cup, guide overlay + mechanical shutter)
+   =========================================================================== */
+const capture = `<div class="screen" id="s-capture" style="--bloom:rgba(246,193,119,.18)">
+  <div class="viewfinder">
+    <div class="vf-photo" style="background:
+      radial-gradient(circle at 44% 40%, rgba(255,255,255,.07) 0 14%, transparent 34%),
+      radial-gradient(circle at 50% 47%, #cfc3ad 0 25%, #b6a68c 25% 31%, #6d543a 31% 34%, #171210 34% 100%),
+      linear-gradient(#141010,#080606)"></div>
+    <div class="vf-photo" style="background:
+      radial-gradient(circle at 45% 40%, rgba(48,32,20,.9) 0 6.5%, transparent 7.5%),
+      radial-gradient(circle at 57% 50%, rgba(40,26,16,.85) 0 5%, transparent 6%),
+      radial-gradient(circle at 50% 57%, rgba(32,21,13,.92) 0 8.5%, transparent 9.5%),
+      radial-gradient(circle at 39% 53%, rgba(44,29,18,.7) 0 3.5%, transparent 4.5%);opacity:.95"></div>
+  </div>
+  <div class="cutout" style="left:24px;top:calc(50% - 168px);width:335px;height:335px"></div>
+  <div class="guide" style="left:24px;top:calc(50% - 168px);width:335px;height:335px;
+    border-color:#F6C177;box-shadow:0 0 22px rgba(246,193,119,.55), inset 0 0 22px rgba(246,193,119,.18)"></div>
+  <div style="position:relative">
+    ${statusbar()}
+    ${nav("Coffee Cup", BACK, "")}
+    <div class="pad" style="margin-top:8px">
+      <div class="glass" style="padding:15px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="callout">Shoot straight down into the cup</div>
+          <span style="color:var(--dusk);font-size:15px">✕</span>
+        </div>
+        <div class="stack" style="gap:6px;margin-top:9px">
+          ${["Drink down to the grounds, then invert and rest the cup",
+             "Hold the camera directly above the rim",
+             "Keep the handle at the bottom of the frame"]
+            .map(t=>`<div style="display:flex;gap:8px;align-items:flex-start">
+              <b style="width:4px;height:4px;border-radius:50%;background:#F6C177;margin-top:6px;flex:0 0 auto"></b>
+              <span class="caption" style="color:var(--moonlight)">${t}</span></div>`).join("")}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="shutter-bar">
+    <div class="ctl raised"><svg viewBox="0 0 24 24"><path d="M20 5H9.2L7.5 7H4a2 2 0 00-2 2v9a2 2 0 002 2h16a2 2 0 002-2V7a2 2 0 00-2-2zm-8 12.5A4.5 4.5 0 1116.5 13 4.5 4.5 0 0112 17.5z"/></svg></div>
+    <div class="collar recessed" style="background:linear-gradient(135deg,#1a1730,#0d0b1c);
+         box-shadow:inset 4px 4px 7px rgba(0,0,0,.9), inset -3px -3px 6px rgba(255,255,255,.10),
+                      -2px -2px 5px rgba(255,255,255,.06), 2px 3px 6px rgba(0,0,0,.6);
+         border:1px solid rgba(255,255,255,.07)">
+      <div class="shutter" style="background:linear-gradient(135deg,#FBD9A0 0%,#F6C177 38%,#B4551C 100%);
+           box-shadow:-4px -4px 8px rgba(255,255,255,.22), 4px 5px 10px rgba(0,0,0,.75),
+                      0 0 22px rgba(246,193,119,.45)"></div>
+    </div>
+    <div class="ctl raised"><svg viewBox="0 0 24 24"><path d="M20 4h-3.2l-1.7-2H8.9L7.2 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm-8 13a5 5 0 115-5 5 5 0 01-5 5z"/></svg></div>
+  </div>
+  <div class="homebar"></div></div>`;
+
+/* ===========================================================================
+   3 — Analysing
+   =========================================================================== */
+function ring(size, from, to, rot, op){
+  return `<div class="ring" style="inset:${(190-size)/2}px;
+    background:conic-gradient(from ${rot}deg, ${from} 0deg, ${to} 190deg, transparent 200deg, transparent 360deg);
+    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px));
+    mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px));
+    filter:drop-shadow(0 0 6px ${from}80);
+    border:0;opacity:${op}"></div>`;
+}
+const analysing = `<div class="screen" id="s-analysing" style="--bloom:rgba(110,231,183,.3)">${stars(80,3)}
+  <div style="position:relative;height:100%;display:flex;flex-direction:column">
+    ${statusbar()}${nav("Palm Reading", BACK, "")}
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px">
+      <div class="orbits">
+        ${ring(190,"#6EE7B7","rgba(14,116,144,.12)",30,1)}
+        ${ring(150,"#5EE7DF","rgba(139,92,246,.12)",200,.92)}
+        ${ring(110,"#8B5CF6","rgba(94,231,223,.12)",110,.85)}
+        <div class="core" style="inset:66px;background:radial-gradient(circle,rgba(110,231,183,.7),transparent 70%)"></div>
+        <div style="position:absolute;inset:0;display:grid;place-items:center;font-size:24px;color:var(--starlight)">✦</div>
+      </div>
+      <div style="text-align:center;padding:0 32px">
+        <div class="headline">Reading the mounts…</div>
+        <div class="caption" style="margin-top:7px">This usually takes about 18 seconds.</div>
+      </div>
+    </div>
+    <div class="pad" style="padding-bottom:44px">
+      <div class="btn secondary raised">Cancel</div>
+    </div>
+  </div><div class="homebar"></div></div>`;
+</script>
+
+<script>
+/* ===========================================================================
+   4 — Reading result
+   =========================================================================== */
+const BALANCE = [["fire",18],["earth",30],["air",37],["water",15]];
+
+function balanceBar(){
+  return `<div>
+    <div class="track recessed">${BALANCE.filter(b=>b[1]>0).map(([e,v])=>
+      `<i style="width:${v*3.28}px;background:linear-gradient(180deg,${ELEMENTS[e]},${ELEMENTS[e]}8c)"></i>`).join("")}</div>
+    <div class="legend">${BALANCE.map(([e,v])=>
+      `<span><b style="background:${ELEMENTS[e]}"></b>${e[0].toUpperCase()+e.slice(1)} ${v}%</span>`).join("")}</div>
+  </div>`;
+}
+function gauge(score, tint){
+  const c = 2*Math.PI*36;
+  return `<div class="gauge">
+    <div class="well recessed"></div>
+    <svg viewBox="0 0 88 88">
+      <circle cx="44" cy="44" r="36" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="8"/>
+      <circle cx="44" cy="44" r="36" fill="none" stroke="${tint}" stroke-width="8" stroke-linecap="round"
+        stroke-dasharray="${(c*score/100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 44 44)"
+        style="filter:drop-shadow(0 0 6px ${tint}99)"/>
+    </svg>
+    <div class="num"><div><div style="font:600 26px Inter">${score}</div>
+      <div style="font:500 10px Inter;color:var(--dusk);margin-top:1px">energy</div></div></div>
+  </div>`;
+}
+function dots(n, tint){
+  return `<div class="dots">${[1,2,3,4,5].map(i=>i<=n
+    ? `<i style="background:${tint};box-shadow:0 0 3px ${tint}b3"></i>`
+    : `<i style="background:rgba(0,0,0,.45);border:.5px solid rgba(255,255,255,.07)"></i>`).join("")}</div>`;
+}
+function marker(name, obs, interp, el, planet, tint, intensity){
+  return `<div class="marker recessed-sm">
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="color:${tint};font-size:11px">◆</span>
+      <span class="callout" style="flex:1">${name}</span>${dots(intensity,tint)}</div>
+    <div class="caption" style="margin-top:6px">${obs}</div>
+    <div class="body" style="margin-top:6px;font-size:14px">${interp}</div>
+    <div style="display:flex;gap:6px;margin-top:9px">
+      <span class="chip raised-sm" style="color:${ELEMENTS[el]}">${el[0].toUpperCase()+el.slice(1)}</span>
+      <span class="chip raised-sm" style="color:var(--gold)">${planet}</span></div>
+  </div>`;
+}
+function zoneCard(label, timeframe, summary, score, tint, expanded, markers){
+  return `<div class="zone ${expanded?'raised-lg':'raised'}">
+    <div class="head"><span class="t">${label}</span>
+      <span class="well recessed-sm" style="color:${tint}">${score}</span>
+      <span style="color:var(--dusk);font-size:11px;transform:rotate(${expanded?0:-90}deg);display:inline-block">▾</span></div>
+    <div class="caption" style="margin-top:5px">${timeframe}</div>
+    <div class="body" style="margin-top:6px">${summary}</div>
+    <div class="track recessed" style="height:10px;margin-top:11px;padding:0 3px">
+      <i style="height:6px;width:${score*3.2}px;background:linear-gradient(90deg,${tint},${tint}99)"></i></div>
+    ${markers||""}</div>`;
+}
+const result = `<div class="screen" id="s-result" style="--bloom:rgba(246,193,119,.28)">${stars(60,11)}
+  <div style="position:relative">
+    ${statusbar()}${nav("Coffee Cup", BACK, SHARE)}
+    <div class="pad stack" style="gap:24px;margin-top:8px">
+      <div class="stack" style="gap:12px">
+        <div class="hero recessed">
+          <div class="img" style="background:
+            radial-gradient(circle at 50% 45%, #efe6d8 0 33%, #d9c9b0 33% 40%, #8a6a4a 40% 43%, #33261c 43% 100%)">
+            <div class="pin" style="left:56%;top:11%;width:66px;height:52px"><span>Bird at the rim</span></div>
+            <div class="pin" style="left:28%;top:58%;width:130px;height:70px"><span>Heavy sediment</span></div>
+            <div class="fade"></div></div>
+        </div>
+        <div class="display">A bird at the rim, heavy sediment at the base</div>
+      </div>
+
+      <div class="glass" style="padding:18px">
+        <div style="display:flex;gap:18px;align-items:center">
+          ${gauge(62,"#F6C177")}
+          <div class="stack" style="gap:5px">
+            <div style="display:flex;align-items:center;gap:7px">
+              ${elGlyph("air", 20)}
+              <span class="headline">Air dominant</span></div>
+            <div class="caption">Thought &amp; exchange</div>
+            <span class="chip raised-sm" style="color:var(--gold);margin-top:4px;align-self:flex-start">confidence 71%</span>
+          </div>
+        </div>
+        <div style="margin-top:16px">${balanceBar()}</div>
+        <div class="body" style="margin-top:15px">News is arriving before the underlying matter is settled. The clearest form in the cup is a winged shape right at the rim — a message or an arrival within days. But the base carries thick, dark sediment: whatever is being answered has roots that have not been worked through.</div>
+      </div>
+
+      <div>
+        <div class="section"><div><div class="h">Around the cup</div>
+          <div class="caption" style="margin-top:2px">4 markers across 4 zones</div></div></div>
+        <div class="stack" style="gap:12px">
+          ${zoneCard("Rim — the next few days","Days","Active and favourable. Something is already on its way to you.",80,"#5EE7DF",true,
+            marker("Bird at the rim","A distinct winged shape with a narrow head sits on the rim at roughly two o'clock.",
+                   "News in motion. Arriving within days, and arriving toward you rather than requiring pursuit.",
+                   "air","☿ Mercury","#6EE7B7",5))}
+          ${zoneCard("Base — roots and outcomes","Months, and the underlying cause","Dense and unresolved. Do not force a conclusion from here yet.",35,"#F97362",false,"")}
+        </div>
+      </div>
+    </div>
+  </div><div class="homebar"></div></div>`;
+
+/* ===========================================================================
+   5 — History
+   =========================================================================== */
+const history = `<div class="screen" id="s-history">${stars(65,23)}
+  <div style="position:relative">
+    ${statusbar()}
+    ${nav("History", BACK, `<svg width="17" height="16" viewBox="0 0 17 16" fill="none" stroke="#F4F1FF" stroke-width="1.6" stroke-linejoin="round"><path d="M8.5 1.5 10.7 6l4.8.6-3.5 3.4.9 4.8-4.4-2.4-4.4 2.4.9-4.8L1.5 6.6 6.3 6z"/></svg>`)}
+    <div class="filterbar">
+      <div class="pill raised-sm" style="color:var(--moonlight)">All</div>
+      <div class="pill recessed-sm" style="color:#F6C177">Coffee Cup</div>
+      <div class="pill raised-sm" style="color:var(--moonlight)">Face</div>
+      <div class="pill raised-sm" style="color:var(--moonlight)">Palm</div>
+    </div>
+    <div class="pad stack" style="gap:10px;margin-top:16px">
+      ${row("coffee","A bird at the rim, heavy sediment at the base","2 hours ago",62,"air")}
+      ${row("coffee","Ring near the handle, clear road to the rim","4 days ago",74,"water")}
+      ${row("coffee","Scattered grounds — a matter still forming","1 week ago",49,"air")}
+      ${row("coffee","Anchor at the base, star on the upper wall","2 weeks ago",81,"earth")}
+      ${row("coffee","A fork on the wall, thin sediment throughout","3 weeks ago",66,"fire")}
+    </div>
+  </div><div class="homebar"></div></div>`;
+
+/* ===========================================================================
+   6 — Settings
+   =========================================================================== */
+function providerRow(name, model, selected, hasKey){
+  return `<div style="display:flex;align-items:center;gap:10px;padding:11px 0">
+    <div style="flex:1"><div class="callout">${name}</div>
+      <div class="mono" style="color:var(--dusk);margin-top:3px">${model}</div></div>
+    ${hasKey?`<span style="color:var(--gold);font-size:12px">🔑</span>`:""}
+    <div style="width:20px;height:20px;border-radius:50%;display:grid;place-items:center;
+      ${selected?'background:var(--aura)':'border:1.5px solid var(--dusk)'}">
+      ${selected?'<b style="width:7px;height:7px;border-radius:50%;background:#07060F;display:block"></b>':''}</div>
+  </div>`;
+}
+const settings = `<div class="screen" id="s-settings">${stars(65,41)}
+  <div style="position:relative">
+    ${statusbar()}${nav("Settings", BACK, "")}
+    <div class="pad stack" style="gap:26px;margin-top:12px">
+      <div>
+        <div class="section"><div><div class="h">Vision provider</div>
+          <div class="caption" style="margin-top:2px">Which service analyses your images</div></div></div>
+        <div class="glass" style="padding:6px 18px">
+          ${providerRow("Anthropic Claude","claude-opus-5",true,true)}
+          <div style="height:1px;background:rgba(255,255,255,.06)"></div>
+          ${providerRow("OpenAI","gpt-4o",false,false)}
+          <div style="height:1px;background:rgba(255,255,255,.06)"></div>
+          ${providerRow("Google Gemini","gemini-2.0-flash",false,false)}
+        </div>
+      </div>
+      <div>
+        <div class="section"><div><div class="h">API key</div>
+          <div class="caption" style="margin-top:2px">Stored in the iOS Keychain on this device</div></div></div>
+        <div class="glass" style="padding:18px">
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="color:var(--glow);font-size:13px">✓</span>
+            <span class="callout">A key is set for Anthropic Claude</span></div>
+          <div style="display:flex;gap:12px;margin-top:14px">
+            <div class="btn secondary raised" style="flex:1;height:46px;font-size:15px">Replace</div>
+            <div class="btn secondary raised" style="flex:1;height:46px;font-size:15px">Remove</div></div>
+          <div class="caption" style="margin-top:14px;line-height:1.5">Your key never leaves this device except in requests to Anthropic Claude. Images are sent to that provider for analysis and are not stored by AuraScan anywhere but locally.</div>
+        </div>
+      </div>
+      <div>
+        <div class="section"><div><div class="h">Model</div>
+          <div class="caption" style="margin-top:2px">Must support image input</div></div></div>
+        <div class="glass" style="padding:18px">
+          <div class="field recessed">claude-opus-5</div>
+          <div style="display:flex;gap:12px;margin-top:12px">
+            <div class="btn secondary raised" style="flex:1;height:46px;font-size:15px">Apply</div>
+            <div class="btn secondary raised" style="flex:1;height:46px;font-size:15px">Reset</div></div>
+        </div>
+      </div>
+    </div>
+  </div><div class="homebar"></div></div>`;
+
+document.getElementById("sheet").innerHTML =
+  [home, capture, analysing, result, history, settings].join("");
+</script>

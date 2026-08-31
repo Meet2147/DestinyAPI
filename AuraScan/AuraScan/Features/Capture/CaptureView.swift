@@ -18,6 +18,7 @@ struct CaptureView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: CaptureViewModel?
     @State private var showsTips = true
+    @State private var isShutterPressed = false
 
     var body: some View {
         ZStack {
@@ -136,29 +137,40 @@ struct CaptureView: View {
                 Image(systemName: "photo.on.rectangle.angled")
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(Theme.Palette.starlight)
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(.ultraThinMaterial))
+                    .frame(width: 52, height: 52)
+                    .softRaised(Circle(), depth: .medium)
             }
             .accessibilityLabel("Choose from library")
 
+            // The shutter is the one control that must feel mechanical: an
+            // extruded button seated in a recessed collar, sinking on press.
             Button {
                 Task { await viewModel.capture() }
             } label: {
                 ZStack {
                     Circle()
-                        .strokeBorder(Color.white.opacity(0.9), lineWidth: 3)
-                        .frame(width: 74, height: 74)
+                        .fill(.clear)
+                        .frame(width: 82, height: 82)
+                        .softRecessed(Circle(), depth: .medium)
+
                     Circle()
                         .fill(
-                            LinearGradient(colors: modality.gradient, startPoint: .top, endPoint: .bottom)
+                            LinearGradient(colors: modality.gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
                         )
-                        .frame(width: 60, height: 60)
+                        .frame(width: 62, height: 62)
+                        .shadow(color: SoftDepth.highlight, radius: 6, x: -3, y: -3)
+                        .shadow(color: SoftDepth.shade, radius: 8, x: 3, y: 4)
+                        .shadow(color: modality.accent.opacity(0.5), radius: 16)
+                        .scaleEffect(isShutterPressed ? 0.92 : 1)
+                        .animation(.spring(duration: 0.2), value: isShutterPressed)
+
                     if viewModel.camera.isCapturing {
                         ProgressView().tint(Theme.Palette.void)
                     }
                 }
             }
             .disabled(viewModel.camera.status != .running || viewModel.camera.isCapturing)
+            .onLongPressGesture(minimumDuration: 0, pressing: { isShutterPressed = $0 }, perform: {})
             .accessibilityLabel("Take photo")
 
             Button {
@@ -167,8 +179,8 @@ struct CaptureView: View {
                 Image(systemName: "arrow.triangle.2.circlepath.camera")
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(Theme.Palette.starlight)
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(.ultraThinMaterial))
+                    .frame(width: 52, height: 52)
+                    .softRaised(Circle(), depth: .medium)
             }
             .accessibilityLabel("Switch camera")
         }
@@ -187,10 +199,11 @@ struct CaptureView: View {
                             .resizable()
                             .scaledToFit()
                             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-                                    .strokeBorder(modality.accent.opacity(0.4), lineWidth: 1)
-                            }
+                            .padding(6)
+                            .softRecessed(
+                                RoundedRectangle(cornerRadius: Theme.Radius.large + 6, style: .continuous),
+                                depth: .medium
+                            )
                     }
 
                     GlassCard(tint: modality.accent) {
@@ -208,10 +221,7 @@ struct CaptureView: View {
                                 .foregroundStyle(Theme.Palette.starlight)
                                 .lineLimit(1...3)
                                 .padding(Theme.Spacing.sm)
-                                .background(
-                                    RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                                        .fill(Theme.Palette.void.opacity(0.5))
-                                )
+                                .softRecessedField()
 
                             modalityExtras(bindable: bindable)
                         }
@@ -254,10 +264,7 @@ struct CaptureView: View {
                 .font(Theme.Font.body)
                 .foregroundStyle(Theme.Palette.starlight)
                 .padding(Theme.Spacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                        .fill(Theme.Palette.void.opacity(0.5))
-                )
+                .softRecessedField()
         case .face, .coffee:
             EmptyView()
         }

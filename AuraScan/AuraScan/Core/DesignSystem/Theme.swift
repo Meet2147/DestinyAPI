@@ -18,6 +18,14 @@ enum Theme {
         static let surface = Color(hex: 0x1E1B3A)
         static let surfaceRaised = Color(hex: 0x272348)
 
+        // Depth grounds. `raisedTop`/`raisedBottom` give an extrusion its
+        // top-lit gradient; `recessed`/`recessedDeep` line the wells. They sit
+        // close together on purpose — soft UI reads as depth, not as colour.
+        static let raisedTop = Color(hex: 0x2A2551)
+        static let raisedBottom = Color(hex: 0x1B1836)
+        static let recessed = Color(hex: 0x161331)
+        static let recessedDeep = Color(hex: 0x100E24)
+
         static let starlight = Color(hex: 0xF4F1FF)
         static let moonlight = Color(hex: 0xB9B2D9)
         static let dusk = Color(hex: 0x7C7499)
@@ -117,7 +125,7 @@ extension SectionHeader where Accessory == EmptyView {
     }
 }
 
-/// Primary call-to-action.
+/// Primary call-to-action. Raised out of the ground, sinking when pressed.
 struct AuraButtonStyle: ButtonStyle {
     var colors: [Color] = [Theme.Palette.aura, Theme.Palette.glow]
     var isProminent = true
@@ -125,28 +133,52 @@ struct AuraButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(Theme.Font.headline)
-            .foregroundStyle(isProminent ? Theme.Palette.void : Theme.Palette.starlight)
-            .padding(.vertical, 15)
+            .foregroundStyle(labelColor(isPressed: configuration.isPressed))
+            .padding(.vertical, 16)
             .frame(maxWidth: .infinity)
-            .background {
-                Capsule().fill(
-                    isProminent
-                        ? AnyShapeStyle(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
-                        : AnyShapeStyle(Theme.Palette.surfaceRaised)
+            .background { face(isPressed: configuration.isPressed) }
+            .overlay {
+                Capsule().strokeBorder(
+                    .white.opacity(configuration.isPressed ? 0.04 : 0.16),
+                    lineWidth: 1
                 )
             }
-            .overlay {
-                if !isProminent {
-                    Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1)
-                }
-            }
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .opacity(configuration.isPressed ? 0.9 : 1)
-            .animation(.spring(duration: 0.25), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.spring(duration: 0.22), value: configuration.isPressed)
+    }
+
+    /// One face per state — a prominent button keeps its gradient and gets its
+    /// depth from the shadow pair; pressing swaps it for a recessed well.
+    @ViewBuilder
+    private func face(isPressed: Bool) -> some View {
+        if isPressed {
+            Capsule().fill(
+                SoftDepth.recessedFill(tint: isProminent ? colors.first : nil)
+                    .shadow(.inner(color: SoftDepth.innerShade, radius: 6, x: 3, y: 3))
+                    .shadow(.inner(color: SoftDepth.innerHighlight, radius: 6, x: -3, y: -3))
+            )
+        } else if isProminent {
+            Capsule()
+                .fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
+                .shadow(color: SoftDepth.highlight, radius: 9, x: -5, y: -5)
+                .shadow(color: SoftDepth.shade, radius: 11, x: 5, y: 6)
+                .shadow(color: (colors.first ?? .clear).opacity(0.35), radius: 18, y: 8)
+        } else {
+            Capsule()
+                .fill(SoftDepth.raisedFill())
+                .shadow(color: SoftDepth.highlight, radius: 9, x: -5, y: -5)
+                .shadow(color: SoftDepth.shade, radius: 11, x: 5, y: 6)
+        }
+    }
+
+    private func labelColor(isPressed: Bool) -> Color {
+        if isPressed { return Theme.Palette.moonlight }
+        return isProminent ? Theme.Palette.void : Theme.Palette.starlight
     }
 }
 
-/// Small rounded label used for elements, planets and polarity.
+/// Small rounded label used for elements, planets and polarity. Subtly raised —
+/// enough to separate it from the card behind it, not enough to read as a button.
 struct Chip: View {
     let text: String
     var systemImage: String?
@@ -161,9 +193,23 @@ struct Chip: View {
         }
         .font(Theme.Font.caption)
         .foregroundStyle(tint)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 5)
-        .background(Capsule().fill(tint.opacity(0.14)))
-        .overlay(Capsule().strokeBorder(tint.opacity(0.3), lineWidth: 0.5))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .softRaised(Capsule(), depth: .subtle, tint: tint)
+    }
+}
+
+/// A value read off a surface rather than tapped — sits in a well.
+struct ValueWell: View {
+    let text: String
+    var tint: Color = Theme.Palette.moonlight
+
+    var body: some View {
+        Text(text)
+            .font(Theme.Font.mono)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .softRecessed(Capsule(), depth: .subtle)
     }
 }

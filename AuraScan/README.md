@@ -31,6 +31,73 @@ Then run the app, open **Settings**, pick a provider, and paste an API key. The 
 
 ---
 
+## Design
+
+### Visual language — "Soft Depth"
+
+Neumorphism, adapted rather than adopted. Classic soft UI extrudes every surface
+from one flat ground, which on a dark background leaves the light shadow nowhere
+to go and drags body text down to roughly 3:1 contrast. AuraScan is dark and
+photo-first, so depth is applied **only to chrome** — anything you can tap, drag
+or read a value off — while content stays at full contrast.
+
+The rule when adding a control (`Core/DesignSystem/SoftDepth.swift`):
+
+| The element | Treatment |
+|---|---|
+| Responds to touch | `.softRaised(…)`, pressing to a recessed state |
+| Holds a value or a track | `.softRecessed(…)` — a well |
+| Carries text to be read | `GlassCard` — no depth |
+
+Light comes from the top-left everywhere, so every extrusion in the app agrees
+about where the sun is. Pressing a control genuinely inverts its extrusion
+rather than just dimming it: the shutter, the primary button and the history
+filter pills all sink into the ground.
+
+`Design/Screens/mockups.html` reproduces these tokens in CSS so the mockups and
+the SwiftUI build cannot drift apart silently.
+
+### Screens
+
+| | | |
+|---|---|---|
+| ![Dashboard](Design/Screens/01-dashboard.png) | ![Capture](Design/Screens/02-capture.png) | ![Analysing](Design/Screens/03-analysing.png) |
+| Dashboard | Capture | Analysing |
+| ![Reading](Design/Screens/04-reading.png) | ![History](Design/Screens/05-history.png) | ![Settings](Design/Screens/06-settings.png) |
+| Reading | History | Settings |
+
+These are **design mockups, not simulator captures** — they were rendered from
+`Design/Screens/mockups.html` via headless Chromium at 1290×2796 (an exact App
+Store 6.9" screenshot size). Regenerate them with:
+
+```bash
+cd Design/Screens && node shoot.mjs
+```
+
+Type is Fraunces (display) and Inter (UI) in the mockups, standing in for the
+system serif and SF Pro that the app actually uses on device.
+
+### Logo
+
+![AuraScan icon](Design/Logo/contact-sheet.png)
+
+An aura orb held inside four capture brackets — the brackets deliberately echo
+`CaptureGuideOverlay`, so the icon and the viewfinder read as the same product.
+Authored as SVG (`Design/Logo/aurascan-icon.svg`) and rasterised into
+`AuraScan/Resources/Assets.xcassets/AppIcon.appiconset`, including the iOS 18
+dark and tinted variants. Regenerate after editing the SVG:
+
+```bash
+cd Design/Logo && python3 -c "
+import cairosvg
+for n in ('aurascan-icon','aurascan-icon-dark','aurascan-icon-tinted'):
+    cairosvg.svg2png(url=f'{n}.svg', write_to=f'{n}-1024.png', output_width=1024, output_height=1024)"
+```
+
+Every stroke is at least 12px at 1024 so the mark survives being 40pt on a home
+screen; `contact-sheet.png` shows it at 1024, 180, 120, 80 and 40.
+
+
 ## Architecture
 
 MVVM with a service layer. Views hold no networking, persistence, or AVFoundation code; `AppEnvironment` is the composition root and the only place concrete services are constructed.
@@ -58,6 +125,7 @@ AuraScan/
 │   │   └── RootView.swift                NavigationStack + Route enum
 │   ├── Core/
 │   │   ├── DesignSystem/
+│   │   │   ├── SoftDepth.swift           neumorphic raised/recessed modifiers
 │   │   │   ├── Theme.swift               palette, type scale, GlassCard, AuraButtonStyle, Chip
 │   │   │   ├── CosmicBackground.swift    gradient + seeded star field
 │   │   │   └── ElementBalanceBar.swift   stacked elemental bar, EnergyGauge
@@ -93,7 +161,12 @@ AuraScan/
 │   │   ├── Result/     ReadingResultView, ShareCardView
 │   │   ├── History/    HistoryView
 │   │   └── Settings/   SettingsView
-│   └── Resources/Info.plist
+│   └── Resources/
+│       ├── Info.plist
+│       └── Assets.xcassets/              AppIcon (light/dark/tinted), colours, AuraMark
+├── Design/
+│   ├── Logo/                             icon SVG masters + rendered PNGs
+│   └── Screens/                          mockups.html, shoot.mjs, screenshot PNGs
 └── AuraScanTests/                        Swift Testing suites
 ```
 

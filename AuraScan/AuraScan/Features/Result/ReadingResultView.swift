@@ -83,6 +83,11 @@ struct ReadingResultView: View {
                             .allowsHitTesting(false)
                         }
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
+                        .padding(6)
+                        .softRecessed(
+                            RoundedRectangle(cornerRadius: Theme.Radius.large + 6, style: .continuous),
+                            depth: .medium
+                        )
 
                     if analysis.markers.contains(where: { $0.boundingBox != nil }) {
                         Button {
@@ -91,8 +96,8 @@ struct ReadingResultView: View {
                             Image(systemName: showsPhotoOverlay ? "eye.fill" : "eye.slash.fill")
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(Theme.Palette.starlight)
-                                .padding(9)
-                                .background(Circle().fill(.ultraThinMaterial))
+                                .padding(10)
+                                .softRaised(Circle(), depth: .subtle)
                         }
                         .padding(Theme.Spacing.sm)
                         .accessibilityLabel(showsPhotoOverlay ? "Hide marker pins" : "Show marker pins")
@@ -377,9 +382,7 @@ struct ZoneCard: View {
                             .foregroundStyle(Theme.Palette.starlight)
                             .multilineTextAlignment(.leading)
                         Spacer(minLength: Theme.Spacing.xs)
-                        Text("\(zone.score)")
-                            .font(Theme.Font.mono)
-                            .foregroundStyle(scoreTint)
+                        ValueWell(text: "\(zone.score)", tint: scoreTint)
                         Image(systemName: "chevron.down")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Theme.Palette.dusk)
@@ -398,9 +401,17 @@ struct ZoneCard: View {
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    ProgressView(value: Double(zone.score), total: 100)
-                        .tint(scoreTint)
-                        .scaleEffect(x: 1, y: 0.6, anchor: .center)
+                    // Score track: a well with a raised fill.
+                    GeometryReader { proxy in
+                        Capsule()
+                            .fill(LinearGradient(colors: [scoreTint, scoreTint.opacity(0.6)], startPoint: .leading, endPoint: .trailing))
+                            .shadow(color: .black.opacity(0.5), radius: 2, y: 1)
+                            .frame(width: max(6, (proxy.size.width - 6) * CGFloat(zone.score) / 100))
+                            .padding(3)
+                            .frame(width: proxy.size.width, height: 10, alignment: .leading)
+                            .softRecessed(Capsule(), depth: .subtle)
+                    }
+                    .frame(height: 10)
                 }
             }
             .buttonStyle(.plain)
@@ -422,14 +433,7 @@ struct ZoneCard: View {
             }
         }
         .padding(Theme.Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-                .fill(Theme.Palette.surface.opacity(0.62))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-                .strokeBorder(accent.opacity(isExpanded ? 0.4 : 0.14), lineWidth: 1)
-        )
+        .softRaisedCard(depth: isExpanded ? .pronounced : .medium, tint: accent)
     }
 
     private var scoreTint: Color {
@@ -480,10 +484,7 @@ struct MarkerRow: View {
         }
         .padding(Theme.Spacing.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
-                .fill(Theme.Palette.void.opacity(0.45))
-        )
+        .softRecessed(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous), depth: .subtle)
         .accessibilityElement(children: .combine)
     }
 }
@@ -496,8 +497,17 @@ struct IntensityDots: View {
         HStack(spacing: 2) {
             ForEach(1...5, id: \.self) { level in
                 Circle()
-                    .fill(level <= intensity ? tint : Color.white.opacity(0.12))
-                    .frame(width: 5, height: 5)
+                    .fill(level <= intensity ? tint : Color.black.opacity(0.45))
+                    .frame(width: 6, height: 6)
+                    .shadow(
+                        color: level <= intensity ? tint.opacity(0.7) : .clear,
+                        radius: 3
+                    )
+                    .overlay {
+                        if level > intensity {
+                            Circle().strokeBorder(.white.opacity(0.07), lineWidth: 0.5)
+                        }
+                    }
             }
         }
         .accessibilityLabel("Intensity \(intensity) of 5")

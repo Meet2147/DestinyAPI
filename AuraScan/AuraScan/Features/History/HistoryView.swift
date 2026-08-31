@@ -139,17 +139,13 @@ struct FilterPill: View {
 
     var body: some View {
         Button(action: action) {
+            // Selected filters are pressed *in*; unselected ones stand proud.
             Text(title)
                 .font(Theme.Font.callout)
-                .foregroundStyle(isSelected ? Theme.Palette.void : Theme.Palette.moonlight)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule().fill(isSelected ? tint : Theme.Palette.surface.opacity(0.7))
-                )
-                .overlay(
-                    Capsule().strokeBorder(tint.opacity(isSelected ? 0 : 0.25), lineWidth: 1)
-                )
+                .foregroundStyle(isSelected ? tint : Theme.Palette.moonlight)
+                .padding(.horizontal, 15)
+                .padding(.vertical, 9)
+                .softRaised(Capsule(), depth: .subtle, tint: isSelected ? tint : nil, isPressed: isSelected)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
