@@ -66,12 +66,23 @@ final class CaptureViewModel {
     func capture() async {
         do {
             let captured = try await camera.capturePhoto()
-            image = captured
+            image = await upright(captured)
             phase = .reviewing
             camera.stop()
         } catch {
             phase = .failed(message: error.localizedDescription, recovery: "Try the shutter again.")
         }
+    }
+
+    /// Straightens a photo whose pixels are rotated despite an `.up` EXIF flag,
+    /// which is what messengers produce when they re-encode. Vision runs off the
+    /// main actor — it is tens of milliseconds on a large image.
+    private func upright(_ candidate: UIImage) async -> UIImage {
+        guard modality == .face else { return candidate }
+        let corrector = FaceOrientationCorrector()
+        return await Task.detached(priority: .userInitiated) {
+            corrector.upright(candidate)
+        }.value
     }
 
     func retake() {
@@ -91,7 +102,7 @@ final class CaptureViewModel {
                 phase = .failed(message: "That photo could not be opened.", recovery: "Pick a different image.")
                 return
             }
-            image = picked
+            image = await upright(picked)
             phase = .reviewing
             camera.stop()
         } catch {
