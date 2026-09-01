@@ -144,9 +144,14 @@ private struct SoftRecessed<S: InsettableShape>: ViewModifier {
     }
 }
 
+// These helpers only read their parameters and compose a view, but they
+// inherit main-actor isolation from `View` under Swift 6. That made them
+// uncallable from nonisolated SwiftUI closures — a `PhotosPicker` label, for
+// one — because `some View` is not Sendable. `nonisolated` drops the isolation
+// they never needed.
 extension View {
     /// Extrudes the view from the ground. Use for anything tappable.
-    func softRaised(
+    nonisolated func softRaised(
         _ shape: some InsettableShape,
         depth: SoftDepth.Depth = .medium,
         tint: Color? = nil,
@@ -156,7 +161,7 @@ extension View {
     }
 
     /// Sinks the view into the ground. Use for tracks, wells and value fields.
-    func softRecessed(
+    nonisolated func softRecessed(
         _ shape: some InsettableShape,
         depth: SoftDepth.Depth = .medium,
         tint: Color? = nil
@@ -165,7 +170,7 @@ extension View {
     }
 
     /// Convenience for the app's standard rounded rectangle.
-    func softRaisedCard(
+    nonisolated func softRaisedCard(
         cornerRadius: CGFloat = Theme.Radius.large,
         depth: SoftDepth.Depth = .medium,
         tint: Color? = nil,
@@ -179,7 +184,7 @@ extension View {
         )
     }
 
-    func softRecessedField(cornerRadius: CGFloat = Theme.Radius.small, depth: SoftDepth.Depth = .subtle) -> some View {
+    nonisolated func softRecessedField(cornerRadius: CGFloat = Theme.Radius.small, depth: SoftDepth.Depth = .subtle) -> some View {
         softRecessed(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous), depth: depth)
     }
 }
