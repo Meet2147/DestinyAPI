@@ -10,19 +10,26 @@
 //  messengers do exactly that. The flag is then a lie and there is nothing in
 //  the file to correct against.
 //
-//  A face is the ground truth we do have: it is only upright in one of the four
-//  rotations. So try each, and keep the one Vision is most sure about.
+//  A face is the ground truth we do have: it is upright in exactly one of the
+//  four rotations.
+//
+//  The approach is deliberately "rotate, then check" rather than "detect, then
+//  map". Translating a `CGImagePropertyOrientation` into a `UIImage.Orientation`
+//  looks obvious but the `.left`/`.right` pairing is a well-known trap, and
+//  getting it backwards rotates the wrong way — a 180° error that looks like a
+//  bug in the camera rather than in this file. Producing the candidate image
+//  and re-testing it needs no mapping to be correct.
 //
 
+import OSLog
 import UIKit
 import Vision
 
 struct FaceOrientationCorrector: Sendable {
-    /// Rotations to try, in the order they are worth trying. `.up` first so a
-    /// correctly-oriented photo costs one detection and no redraw.
-    private static let candidates: [(CGImagePropertyOrientation, UIImage.Orientation)] = [
-        (.up, .up), (.right, .right), (.left, .left), (.down, .down),
-    ]
+    /// Above this, a face is unambiguous and searching further is wasted work.
+    private static let decisive: Float = 0.75
+
+    private let logger = Logger(subsystem: "ai.aurascan", category: "orientation")
 
     /// The rotation of `image` in which a face stands upright.
     ///
@@ -30,49 +37,72 @@ struct FaceOrientationCorrector: Sendable {
     /// coffee cup or a room has no orientation cue, and guessing would be worse
     /// than leaving it alone.
     func upright(_ image: UIImage) -> UIImage {
-        guard let cgImage = image.cgImage else { return image }
+        guard image.size.width > 0, image.size.height > 0 else { return image }
 
-        var best: (orientation: UIImage.Orientation, confidence: Float)?
-        for (cgOrientation, uiOrientation) in Self.candidates {
-            let confidence = faceConfidence(in: cgImage, orientation: cgOrientation)
-            guard confidence > 0 else { continue }
-            if best == nil || confidence > best!.confidence {
-                best = (uiOrientation, confidence)
-            }
-            // An unambiguous hit on the first candidate means the photo is
-            // already straight; stop rather than pay for three more passes.
-            if cgOrientation == .up && confidence > 0.9 { return image }
+        // The common case: already straight. One detection, no redraw.
+        let asIs = flattened(image) ?? image
+        let straight = faceConfidence(in: asIs)
+        if straight >= Self.decisive {
+            logger.debug("already upright (\(straight, privacy: .public))")
+            return asIs
         }
 
-        guard let best, best.orientation != .up else { return image }
-        return redraw(cgImage, as: best.orientation) ?? image
+        var best = (image: asIs, confidence: straight)
+        for rotation in [UIImage.Orientation.right, .left, .down] {
+            guard let candidate = rotated(asIs, by: rotation) else { continue }
+            // Test the candidate itself, at `.up`. Whatever the enum names
+            // mean, the pixels either show an upright face or they do not.
+            let confidence = faceConfidence(in: candidate)
+            if confidence > best.confidence {
+                best = (candidate, confidence)
+            }
+            if confidence >= Self.decisive { break }
+        }
+
+        logger.debug("chose orientation with confidence \(best.confidence, privacy: .public)")
+        return best.confidence > straight ? best.image : asIs
     }
 
-    private func faceConfidence(in cgImage: CGImage,
-                                orientation: CGImagePropertyOrientation) -> Float {
+    // MARK: - Vision
+
+    private func faceConfidence(in image: UIImage) -> Float {
+        guard let cgImage = image.cgImage else { return 0 }
         let request = VNDetectFaceRectanglesRequest()
-        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation)
         do {
-            try handler.perform([request])
+            try VNImageRequestHandler(cgImage: cgImage, orientation: .up)
+                .perform([request])
         } catch {
             return 0
         }
-        // Largest face wins ties: a bystander in the background should not
-        // decide which way up the subject is.
+        // Largest face wins: a bystander in the background should not decide
+        // which way up the subject is.
         return (request.results ?? [])
             .max { $0.boundingBox.area < $1.boundingBox.area }?
             .confidence ?? 0
     }
 
-    /// Rewrites the pixels in the given orientation so everything downstream —
-    /// display, archive, thumbnail and the model payload — sees it upright.
-    private func redraw(_ cgImage: CGImage, as orientation: UIImage.Orientation) -> UIImage? {
-        let oriented = UIImage(cgImage: cgImage, scale: 1, orientation: orientation)
+    // MARK: - Pixels
+
+    /// Redraws so the orientation flag is `.up` and the pixels are what they
+    /// claim to be. Everything downstream then agrees.
+    private func flattened(_ image: UIImage) -> UIImage? {
+        guard image.imageOrientation != .up else { return image }
+        return render(size: image.size) { image.draw(in: $0) }
+    }
+
+    private func rotated(_ image: UIImage, by orientation: UIImage.Orientation) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+        let turned = UIImage(cgImage: cgImage, scale: 1, orientation: orientation)
+        return render(size: turned.size) { turned.draw(in: $0) }
+    }
+
+    private func render(size: CGSize, _ draw: (CGRect) -> Void) -> UIImage? {
+        guard size.width > 0, size.height > 0 else { return nil }
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = 1
         format.opaque = true
-        return UIGraphicsImageRenderer(size: oriented.size, format: format).image { _ in
-            oriented.draw(in: CGRect(origin: .zero, size: oriented.size))
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            draw(CGRect(origin: .zero, size: size))
         }
     }
 }
