@@ -47,3 +47,32 @@ could use the relay as a general Claude proxy — bounded by their own rate limi
 and the global cap, but not prevented. Moving the prompt and schema server-side
 would close that, at the cost of duplicating them out of the Swift source.
 Worth doing once the prompts settle.
+
+## Deploying to FastAPI Cloud
+
+```bash
+cd relay
+fastapi login          # browser auth, one time
+fastapi deploy
+```
+
+Then set `ANTHROPIC_API_KEY` in the dashboard and redeploy.
+
+Take the URL it gives you and put it in `AuraScan/project.yml`:
+
+```yaml
+RELAY_URL: "https://your-relay.fastapicloud.dev"
+```
+
+then `xcodegen generate` and rebuild. With `RELAY_URL` set the app stops
+asking for a key and routes every reading through the relay; left empty it
+falls back to a Keychain key, which is how development runs.
+
+Verify the wiring before shipping:
+
+```bash
+curl "$RELAY_URL/health"
+curl "$RELAY_URL/v1/status" -H "x-device-id: check-0001"
+```
+
+The second should report `free_remaining: 7`.

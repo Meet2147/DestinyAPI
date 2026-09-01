@@ -67,8 +67,11 @@ final class AppEnvironment {
         analyzerFactory(providerID, modelIdentifier, secretStore)
     }
 
+    /// With a relay configured the app needs no key of its own, so this is
+    /// always satisfied — otherwise the capture screen would refuse to run
+    /// against a perfectly working relay.
     var hasCredentials: Bool {
-        secretStore.hasAPIKey(for: providerID)
+        Self.relayURL != nil || secretStore.hasAPIKey(for: providerID)
     }
 
     // MARK: - Factory
@@ -79,6 +82,17 @@ final class AppEnvironment {
         secretStore: any SecretStoring
     ) -> any VisionAnalyzing {
         let keyProvider: @Sendable () throws -> String = { try secretStore.apiKey(for: providerID) }
+
+        // A configured relay wins: it holds the key, so the app does not
+        // need one and the user is never asked for one.
+        if let relay = Self.relayURL {
+            // `model` is carried for the request shape only — the relay pins
+            // the real one, so a client cannot choose an expensive model.
+            return VisionAnalysisService(
+                provider: RelayProvider(baseURL: relay),
+                model: model
+            )
+        }
 
         let provider: any AIProvider = switch providerID {
         case .anthropic: AnthropicProvider(apiKeyProvider: keyProvider)
@@ -92,6 +106,18 @@ final class AppEnvironment {
     // MARK: - Defaults keys
 
     private static let providerKey = "aurascan.provider"
+
+    /// The relay's base URL. Set `RELAY_URL` in Info.plist for a real build;
+    /// leaving it empty falls back to calling the provider directly with a
+    /// key from the Keychain, which is how development works.
+    static var relayURL: URL? {
+        let raw = (Bundle.main.object(forInfoDictionaryKey: "RELAY_URL") as? String)
+            ?? ProcessInfo.processInfo.environment["RELAY_URL"]
+            ?? ""
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, trimmed.hasPrefix("https://") else { return nil }
+        return URL(string: trimmed)
+    }
 
     private static func modelKey(for provider: AIProviderID) -> String {
         "aurascan.model.\(provider.rawValue)"

@@ -26,6 +26,8 @@
 	<string>AuraScan uses the camera to photograph your face, palm, coffee cup or space for a reading. Photos stay on your device except for the single image you choose to analyse.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose an existing photo to read instead of taking a new one.</string>
+	<key>RELAY_URL</key>
+	<string>$(RELAY_URL)</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
