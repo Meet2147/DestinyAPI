@@ -10,6 +10,18 @@
 //  Keep it in sync with `AnalysisResponse` — `SchemaAndPromptTests` asserts that
 //  the zone enums match `ModalityType.zoneVocabulary`.
 //
+//  Anthropic's constrained decoding accepts only a subset of JSON Schema, and
+//  rejects the whole request rather than ignoring what it does not know:
+//
+//      minimum / maximum   unsupported on number AND integer
+//      maxItems            unsupported
+//      minItems            only 0 or 1
+//
+//  `maxLength`, `enum`, `anyOf`, `description` and nullable type arrays are
+//  fine. So ranges and counts are expressed as `description` text, which the
+//  model honours, and enforced for real in `AnalysisResponse`, which clamps
+//  every numeric field as it decodes.
+//
 //  The schema is assembled from small fragments rather than one literal: a
 //  single nested `[String: Any]` this large is a well-known way to stall the
 //  type checker.
@@ -24,7 +36,7 @@ enum AnalysisSchema {
     static func jsonSchema(for modality: ModalityType) -> [String: Any] {
         var properties: [String: Any] = [:]
         properties["modality"] = ["type": "string", "enum": [modality.rawValue]]
-        properties["confidence"] = ["type": "number", "minimum": 0, "maximum": 1]
+        properties["confidence"] = boundedNumber(0, 1, "how confident the reading is")
         properties["image_quality"] = imageQuality
         properties["headline"] = ["type": "string", "maxLength": 80]
         properties["summary"] = ["type": "string"]
@@ -63,7 +75,7 @@ enum AnalysisSchema {
             properties: ["element": elementEnum, "score": boundedInteger(0, 100)],
             required: ["element", "score"]
         )
-        return ["type": "array", "minItems": 4, "maxItems": 4, "items": entry]
+        return array(of: entry, min: 4, max: 4, what: "entries, one per element")
     }
 
     private static func markers(for modality: ModalityType) -> [String: Any] {
@@ -86,11 +98,11 @@ enum AnalysisSchema {
                 "element", "planet", "polarity", "intensity", "bounding_box",
             ]
         )
-        return ["type": "array", "minItems": 3, "maxItems": 12, "items": item]
+        return array(of: item, min: 3, max: 12, what: "markers")
     }
 
     private static var boundingBox: [String: Any] {
-        let unitInterval: [String: Any] = ["type": "number", "minimum": 0, "maximum": 1]
+        let unitInterval = boundedNumber(0, 1, "fraction of the image edge")
         return object(
             properties: [
                 "x": unitInterval,
@@ -115,7 +127,7 @@ enum AnalysisSchema {
             properties: properties,
             required: ["zone", "label", "timeframe", "summary", "score", "element"]
         )
-        return ["type": "array", "minItems": 3, "items": item]
+        return array(of: item, min: 3, what: "zones")
     }
 
     private static var guidance: [String: Any] {
@@ -123,9 +135,13 @@ enum AnalysisSchema {
         properties["focus"] = ["type": "string"]
         properties["affirmation"] = ["type": "string"]
         properties["actions"] = actions
-        properties["cautions"] = ["type": "array", "items": ["type": "string"], "maxItems": 3]
+        properties["cautions"] = array(of: ["type": "string"], min: 0, max: 3,
+                                       what: "short cautions")
         properties["lucky_color"] = nullable(luckyColor)
-        properties["lucky_number"] = ["type": ["integer", "null"], "minimum": 0, "maximum": 99]
+        properties["lucky_number"] = [
+            "type": ["integer", "null"],
+            "description": "Integer from 0 to 99, or null.",
+        ]
         properties["favorable_window"] = nullableString
         properties["ritual"] = nullableString
 
@@ -147,7 +163,7 @@ enum AnalysisSchema {
             ],
             required: ["title", "detail", "horizon"]
         )
-        return ["type": "array", "minItems": 2, "maxItems": 5, "items": item]
+        return array(of: item, min: 2, max: 5, what: "actions")
     }
 
     private static var luckyColor: [String: Any] {
@@ -174,8 +190,34 @@ enum AnalysisSchema {
         ["type": ["string", "null"]]
     }
 
+    /// The range lives in `description` because the numeric bounds keywords are
+    /// rejected outright. `AnalysisResponse` clamps on decode regardless.
     private static func boundedInteger(_ minimum: Int, _ maximum: Int) -> [String: Any] {
-        ["type": "integer", "minimum": minimum, "maximum": maximum]
+        ["type": "integer", "description": "Integer from \(minimum) to \(maximum)."]
+    }
+
+    private static func boundedNumber(_ minimum: Double, _ maximum: Double,
+                                      _ note: String? = nil) -> [String: Any] {
+        var text = "Number from \(minimum) to \(maximum)."
+        if let note { text += " \(note.prefix(1).capitalized + note.dropFirst())." }
+        return ["type": "number", "description": text]
+    }
+
+    /// `maxItems` is rejected and `minItems` accepts only 0 or 1, so an exact
+    /// count is stated in `description` instead.
+    private static func array(of item: [String: Any], min: Int, max: Int? = nil,
+                              what: String) -> [String: Any] {
+        let count: String
+        if let max {
+            count = min == max ? "Exactly \(min) \(what)."
+                               : "Between \(min) and \(max) \(what)."
+        } else {
+            count = "At least \(min) \(what)."
+        }
+        var schema: [String: Any] = ["type": "array", "items": item,
+                                     "description": count]
+        if min >= 1 { schema["minItems"] = 1 }
+        return schema
     }
 
     private static func object(properties: [String: Any], required: [String]) -> [String: Any] {
