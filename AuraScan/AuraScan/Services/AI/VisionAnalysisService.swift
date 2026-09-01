@@ -30,10 +30,14 @@ struct AnalysisResult: Sendable {
     let didRepair: Bool
 }
 
-enum AnalysisError: LocalizedError {
+enum AnalysisError: LocalizedError, Sendable {
     case imageEncodingFailed
     case noJSONInResponse(raw: String)
-    case decodingFailed(underlying: any Error, raw: String)
+    /// `reason` is a description rather than the underlying error: `any Error`
+    /// is not Sendable, and this type has to cross isolation boundaries (it is
+    /// thrown from the Sendable `VisionAnalyzing`). Nothing inspects the
+    /// original error — it is only ever logged.
+    case decodingFailed(reason: String, raw: String)
     case unusableImage(suggestion: String?)
     case provider(AIProviderError)
 
@@ -167,9 +171,7 @@ struct VisionAnalysisService: VisionAnalyzing {
             let response = try JSONDecoder().decode(AnalysisResponse.self, from: Data(json.utf8))
             guard response.modality == modality else {
                 throw AnalysisError.decodingFailed(
-                    underlying: DecodingError.dataCorrupted(
-                        .init(codingPath: [], debugDescription: "Modality mismatch: expected \(modality.rawValue), got \(response.modality.rawValue)")
-                    ),
+                    reason: "Modality mismatch: expected \(modality.rawValue), got \(response.modality.rawValue)",
                     raw: json
                 )
             }
@@ -180,7 +182,7 @@ struct VisionAnalysisService: VisionAnalyzing {
         } catch let error as AnalysisError {
             throw error
         } catch {
-            throw AnalysisError.decodingFailed(underlying: error, raw: json)
+            throw AnalysisError.decodingFailed(reason: String(describing: error), raw: json)
         }
     }
 

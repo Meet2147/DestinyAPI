@@ -94,7 +94,7 @@ protocol AIProvider: Sendable {
 
 // MARK: - Errors
 
-enum AIProviderError: LocalizedError, Equatable {
+enum AIProviderError: LocalizedError, Equatable, Sendable {
     case missingAPIKey(AIProviderID)
     case invalidResponse
     case emptyCompletion

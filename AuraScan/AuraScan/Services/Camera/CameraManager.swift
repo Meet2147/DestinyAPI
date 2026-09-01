@@ -81,23 +81,33 @@ final class CameraManager: NSObject {
         guard status == .running else {
             throw CameraError.notReady
         }
-        isCapturing = true
-        defer { isCapturing = false }
-
         let settings = makeSettings()
         let id = settings.uniqueID
 
+        isCapturing = true
+        // Cleanup lives here rather than in the delegate callback: hopping back
+        // to the main actor from the callback would mean carrying a
+        // `Result<UIImage, any Error>` across an isolation boundary, and
+        // `any Error` is not Sendable. `defer` runs on the main actor already.
+        defer {
+            isCapturing = false
+            delegates[id] = nil
+        }
+
+        // AVCapturePhotoSettings is not Sendable, and the capture has to be
+        // issued from sessionQueue.
+        let settingsBox = UncheckedBox(settings)
+
         return try await withCheckedThrowingContinuation { continuation in
-            let delegate = PhotoCaptureDelegate { [weak self] result in
-                Task { @MainActor [weak self] in
-                    self?.delegates[id] = nil
-                    continuation.resume(with: result)
-                }
+            // Resuming a continuation is safe from any isolation, so the
+            // delegate can call straight through without a hop.
+            let delegate = PhotoCaptureDelegate { result in
+                continuation.resume(with: result)
             }
             delegates[id] = delegate
 
             sessionQueue.async {
-                self.photoOutput.capturePhoto(with: settings, delegate: delegate)
+                self.photoOutput.capturePhoto(with: settingsBox.value, delegate: delegate)
             }
         }
     }
@@ -226,7 +236,10 @@ final class CameraManager: NSObject {
         }
     }
 
-    private static func device(for position: AVCaptureDevice.Position) -> AVCaptureDevice? {
+    /// `nonisolated` because it is called from `sessionQueue`, not the main
+    /// actor. It touches no instance state — it is a pure device lookup — so
+    /// there is nothing for the isolation to protect.
+    private nonisolated static func device(for position: AVCaptureDevice.Position) -> AVCaptureDevice? {
         AVCaptureDevice.DiscoverySession(
             deviceTypes: [.builtInDualWideCamera, .builtInWideAngleCamera, .builtInTrueDepthCamera],
             mediaType: .video,
