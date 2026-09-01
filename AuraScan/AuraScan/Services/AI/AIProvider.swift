@@ -26,7 +26,10 @@ enum AIProviderID: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var defaultModel: String {
         switch self {
-        case .anthropic: "claude-opus-5"
+        // Haiku 4.5 costs $0.009 a reading against Opus 5's $0.171 and returns
+        // in 19s rather than 78s. At Opus prices the lifetime tier goes
+        // underwater in under three years; at these prices it does not.
+        case .anthropic: "claude-haiku-4-5"
         case .openAI: "gpt-4o"
         case .gemini: "gemini-2.0-flash"
         }

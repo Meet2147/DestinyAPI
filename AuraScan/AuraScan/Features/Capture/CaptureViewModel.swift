@@ -38,18 +38,27 @@ final class CaptureViewModel {
     private let analyzer: any VisionAnalyzing
     private let repository: any ReadingStoring
     private let imageProcessor: any ImageProcessing
+    private let entitlements: Entitlements?
     private var analysisTask: Task<Void, Never>?
+
+    /// Set when a reading is attempted with no allowance left; the view
+    /// presents the paywall off this.
+    var showPaywall = false
+
+    var allowance: ReadingAllowance { entitlements?.allowance ?? .subscribed }
 
     init(
         modality: ModalityType,
         analyzer: any VisionAnalyzing,
         repository: any ReadingStoring,
-        imageProcessor: any ImageProcessing = ImageProcessor()
+        imageProcessor: any ImageProcessing = ImageProcessor(),
+        entitlements: Entitlements? = nil
     ) {
         self.modality = modality
         self.analyzer = analyzer
         self.repository = repository
         self.imageProcessor = imageProcessor
+        self.entitlements = entitlements
     }
 
     // MARK: - Camera
@@ -114,6 +123,12 @@ final class CaptureViewModel {
 
     func analyze() {
         guard let image else { return }
+        // Check before spending anything: an API call the user is not entitled
+        // to costs real money and cannot be taken back.
+        guard allowance.isAllowed else {
+            showPaywall = true
+            return
+        }
         analysisTask?.cancel()
         phase = .analyzing
 
@@ -126,6 +141,10 @@ final class CaptureViewModel {
                     context: makeContext()
                 )
                 guard !Task.isCancelled else { return }
+
+                // Only now, with a reading in hand. A failed request must not
+                // cost someone a free run.
+                entitlements?.recordSuccessfulReading()
 
                 let saved = try repository.save(analysis: result, modality: modality, image: image)
                 self.result = ReadingPayload(

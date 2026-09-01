@@ -17,6 +17,20 @@ struct AnthropicProvider: AIProvider {
     let id: AIProviderID = .anthropic
     let supportsSchemaEnforcement = true
 
+    /// Whether a model accepts `output_config.effort`.
+    ///
+    /// Haiku 4.5 rejects it outright — "This model does not support the effort
+    /// parameter" — which fails the whole request, not just the parameter. The
+    /// model identifier is user-editable in Settings, so an unknown model is
+    /// treated as unsupported: omitting effort is always valid, sending it is
+    /// not.
+    static func supportsEffort(_ model: String) -> Bool {
+        let id = model.lowercased()
+        guard !id.contains("haiku") else { return false }
+        return id.contains("opus") || id.contains("fable")
+            || id.contains("sonnet-5") || id.contains("sonnet-4-6")
+    }
+
     private let apiKeyProvider: @Sendable () throws -> String
     private let baseURL: URL
     private let http: HTTPClient
@@ -46,7 +60,10 @@ struct AnthropicProvider: AIProvider {
         }
         content.append(["type": "text", "text": request.userPrompt])
 
-        var outputConfig: [String: Any] = ["effort": "high"]
+        var outputConfig: [String: Any] = [:]
+        if Self.supportsEffort(request.model) {
+            outputConfig["effort"] = "high"
+        }
         if let schema = request.jsonSchema {
             outputConfig["format"] = ["type": "json_schema", "schema": schema]
         }

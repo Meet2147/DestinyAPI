@@ -16,6 +16,7 @@ struct CaptureView: View {
 
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.dismiss) private var dismiss
+    @State private var showPaywall = false
     @State private var viewModel: CaptureViewModel?
     @State private var showsTips = true
     @State private var isShutterPressed = false
@@ -40,7 +41,8 @@ struct CaptureView: View {
                 viewModel = CaptureViewModel(
                     modality: modality,
                     analyzer: environment.analyzer,
-                    repository: environment.repository
+                    repository: environment.repository,
+                    entitlements: environment.entitlements
                 )
             }
             await viewModel?.startCamera()
@@ -49,6 +51,39 @@ struct CaptureView: View {
         .onChange(of: viewModel?.result) { _, payload in
             guard let payload else { return }
             path.append(Route.result(payload))
+        }
+        .onChange(of: viewModel?.showPaywall ?? false) { _, wants in
+            if wants { showPaywall = true }
+        }
+        .sheet(isPresented: $showPaywall) {
+            NavigationStack {
+                PaywallView(entitlements: environment.entitlements,
+                            store: environment.subscriptionStore)
+            }
+            .presentationDetents([.large])
+        }
+        .onChange(of: showPaywall) { _, isShowing in
+            if !isShowing { viewModel?.showPaywall = false }
+        }
+    }
+
+    /// Tells someone where they stand before they spend a reading, rather
+    /// than surprising them with a paywall after the shutter.
+    @ViewBuilder
+    private func allowanceCaption(_ viewModel: CaptureViewModel) -> some View {
+        switch viewModel.allowance {
+        case .subscribed:
+            EmptyView()
+        case let .free(remaining):
+            Text(remaining == 1
+                 ? "Your last free reading."
+                 : "\(remaining) free readings left.")
+                .font(Theme.Font.caption)
+                .foregroundStyle(remaining <= 2 ? Theme.Palette.gold : Theme.Palette.dusk)
+        case .exhausted:
+            Button("Free readings used — see plans") { showPaywall = true }
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.Palette.gold)
         }
     }
 
@@ -231,13 +266,8 @@ struct CaptureView: View {
                         viewModel.analyze()
                     }
                     .buttonStyle(AuraButtonStyle(colors: modality.gradient))
-                    .disabled(!environment.hasCredentials)
 
-                    if !environment.hasCredentials {
-                        Text("Add an API key in Settings first.")
-                            .font(Theme.Font.caption)
-                            .foregroundStyle(Theme.Palette.gold)
-                    }
+                    allowanceCaption(viewModel)
 
                     Button("Retake") { viewModel.retake() }
                         .buttonStyle(AuraButtonStyle(isProminent: false))

@@ -32,17 +32,26 @@ final class AppEnvironment {
     let secretStore: any SecretStoring
     let repository: any ReadingStoring
     let container: ModelContainer
+    /// Shared so the paywall, Settings and every capture screen agree on how
+    /// many free readings are left.
+    let entitlements: Entitlements
+    /// One instance for the whole app: StoreKit transaction updates arrive
+    /// whether or not a paywall happens to be open.
+    let subscriptionStore: SubscriptionStore
 
     private let analyzerFactory: @MainActor (AIProviderID, String, any SecretStoring) -> any VisionAnalyzing
 
     init(
         container: ModelContainer,
         secretStore: any SecretStoring = KeychainSecretStore(),
+        entitlements: Entitlements = Entitlements(),
         repository: (any ReadingStoring)? = nil,
         analyzerFactory: (@MainActor (AIProviderID, String, any SecretStoring) -> any VisionAnalyzing)? = nil
     ) {
         self.container = container
         self.secretStore = secretStore
+        self.entitlements = entitlements
+        self.subscriptionStore = SubscriptionStore(entitlements: entitlements)
         self.repository = repository ?? ReadingRepository(context: container.mainContext)
         self.analyzerFactory = analyzerFactory ?? AppEnvironment.makeDefaultAnalyzer
 
