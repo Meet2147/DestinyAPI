@@ -54,7 +54,7 @@ targets:
         # then falls back to a Keychain key, which is how development runs.
         # Set this before shipping — without it the app has no way to work
         # for a user who has not pasted their own key.
-        RELAY_URL: ""
+        RELAY_URL: "https://relay-571a6a98.fastapicloud.dev"
 
   AuraScanTests:
     type: bundle.unit-test
