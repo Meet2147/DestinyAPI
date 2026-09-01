@@ -63,11 +63,18 @@ struct ReadingResultView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             if let data = payload.imageData, let image = UIImage(data: data) {
                 ZStack(alignment: .bottomTrailing) {
+                    // The marker overlay maps the model's 0-1 coordinates onto
+                    // this view's bounds, so the bounds have to BE the image.
+                    // `scaledToFill` in a fixed-height frame cropped a portrait
+                    // to a band and left every marker sitting in the wrong
+                    // place — over a shoulder rather than on a brow.
                     Image(uiImage: image)
                         .resizable()
-                        .scaledToFill()
-                        .frame(height: 240)
-                        .clipped()
+                        .aspectRatio(
+                            max(image.size.width, 1) / max(image.size.height, 1),
+                            contentMode: .fit
+                        )
+                        .frame(maxHeight: 420)
                         .overlay {
                             if showsPhotoOverlay {
                                 MarkerOverlay(markers: analysis.markers, accent: modality.accent)
@@ -525,19 +532,13 @@ struct MarkerOverlay: View {
             ForEach(markers.filter { $0.boundingBox != nil }) { marker in
                 if let box = marker.boundingBox {
                     let rect = box.rect(in: proxy.size)
+                    // Boxes only, no names. Facial features genuinely overlap —
+                    // brow, eyes and nose share space — so eight labels stack
+                    // into an unreadable pile and bury the face they describe.
+                    // Every name is already in the zone cards below.
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(accent.opacity(0.85), lineWidth: 1.5)
+                        .strokeBorder(accent.opacity(0.7), lineWidth: 1.2)
                         .frame(width: rect.width, height: rect.height)
-                        .overlay(alignment: .topLeading) {
-                            Text(marker.name)
-                                .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Theme.Palette.void)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Capsule().fill(accent))
-                                .fixedSize()
-                                .offset(y: -9)
-                        }
                         .position(x: rect.midX, y: rect.midY)
                 }
             }
