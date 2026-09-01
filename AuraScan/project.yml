@@ -39,6 +39,9 @@ targets:
       - path: AuraScan
         excludes:
           - "Resources/Info.plist"
+          # Scheme configuration, not a bundled resource. It must never ship
+          # inside the app: it would let a build serve fake products.
+          - "Resources/AuraScan.storekit"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ai.aurascan.app
@@ -76,6 +79,10 @@ schemes:
         AuraScanTests: [test]
     run:
       config: Debug
+      # Local StoreKit testing: purchases work in the simulator with no App
+      # Store Connect products and no sandbox account. Remove this once the
+      # real products exist, or the app will keep transacting against fakes.
+      storeKitConfiguration: AuraScan/Resources/AuraScan.storekit
       environmentVariables:
         # Seeds an API key for simulator runs without touching the Keychain.
         # Enable it in Xcode's scheme editor and paste a key.

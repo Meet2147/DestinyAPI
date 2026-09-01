@@ -12,6 +12,7 @@ struct SettingsView: View {
     @Environment(AppEnvironment.self) private var environment
 
     @State private var draftKey = ""
+    @State private var showPaywall = false
     @State private var draftModel = ""
     @State private var status: Status?
     @State private var isEditingKey = false
@@ -30,9 +31,15 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                    providerSection(environment: environment)
-                    keySection
-                    modelSection(environment: environment)
+                    subscriptionSection(environment: environment)
+                    // With a relay configured the app supplies no key of its
+                    // own, so provider, key and model are developer plumbing
+                    // rather than anything a user should see or change.
+                    if AppEnvironment.relayURL == nil {
+                        providerSection(environment: environment)
+                        keySection
+                        modelSection(environment: environment)
+                    }
                     aboutSection
                 }
                 .padding(.horizontal, Theme.Spacing.md)
@@ -41,6 +48,12 @@ struct SettingsView: View {
             .scrollIndicators(.hidden)
         }
         .navigationTitle("Settings")
+        .sheet(isPresented: $showPaywall) {
+            NavigationStack {
+                PaywallView(entitlements: environment.entitlements,
+                            store: environment.subscriptionStore)
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear { draftModel = environment.modelIdentifier }
@@ -53,6 +66,44 @@ struct SettingsView: View {
     }
 
     // MARK: - Sections
+
+    @ViewBuilder
+    private func subscriptionSection(environment: AppEnvironment) -> some View {
+        let entitlements = environment.entitlements
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            SectionHeader(
+                title: entitlements.isSubscribed ? "Your plan" : "AuraScan Pro",
+                subtitle: entitlements.isSubscribed
+                    ? "Thank you — every modality is unlocked"
+                    : "Unlimited readings across every modality"
+            )
+            GlassCard {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: entitlements.isSubscribed
+                              ? "checkmark.seal.fill" : "sparkles")
+                            .foregroundStyle(entitlements.isSubscribed
+                                             ? Theme.Palette.glow : Theme.Palette.gold)
+                        Text(entitlements.isSubscribed
+                             ? "Subscribed"
+                             : entitlements.freeRemaining == 0
+                               ? "No free readings left"
+                               : "\(entitlements.freeRemaining) of \(Entitlements.freeAllowance) free readings left")
+                            .font(Theme.Font.callout)
+                            .foregroundStyle(Theme.Palette.starlight)
+                    }
+                    if !entitlements.isSubscribed {
+                        Button("See plans") { showPaywall = true }
+                            .buttonStyle(AuraButtonStyle())
+                    } else {
+                        Text("Manage or cancel in the App Store, under your Apple Account.")
+                            .font(Theme.Font.caption)
+                            .foregroundStyle(Theme.Palette.dusk)
+                    }
+                }
+            }
+        }
+    }
 
     private func providerSection(environment: AppEnvironment) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
