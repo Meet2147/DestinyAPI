@@ -75,6 +75,16 @@ struct AnalysisResponse: Codable, Hashable, Sendable {
         self.guidance = guidance
     }
 
+    /// Whether this reading actually says anything.
+    ///
+    /// The thresholds are deliberately generous — this is meant to catch a
+    /// failed read, not to second-guess a cautious one. The prompt asks for
+    /// 4–9 markers across 3+ zones, so two markers in one zone already means
+    /// something went wrong with the image rather than with the subject.
+    var isSubstantive: Bool {
+        confidence >= 0.15 && markers.count >= 2 && !zones.isEmpty
+    }
+
     /// Markers grouped by zone, preserving the model's ordering of zones.
     /// A named type rather than a tuple: `ForEach` needs a key path, and Swift
     /// has no key paths into tuple elements.

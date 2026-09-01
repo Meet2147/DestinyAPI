@@ -178,6 +178,18 @@ struct VisionAnalysisService: VisionAnalyzing {
             guard response.imageQuality.usable else {
                 throw AnalysisError.unusableImage(suggestion: response.imageQuality.suggestion)
             }
+            // A model that cannot read the image does not always say so in
+            // `image_quality` — sometimes it reports the image as usable and
+            // then returns a hollow reading: near-zero confidence, a single
+            // marker, no zones. Rendering that shows the querent an empty
+            // verdict (0 energy, 0% confidence, four elements at 25%) which
+            // reads as a judgement of them rather than of the photo.
+            guard response.isSubstantive else {
+                throw AnalysisError.unusableImage(
+                    suggestion: response.imageQuality.suggestion
+                        ?? "Try a straight-on, well-lit shot with the whole subject in frame."
+                )
+            }
             return response
         } catch let error as AnalysisError {
             throw error
