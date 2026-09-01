@@ -1,6 +1,7 @@
-# XcodeGen spec — `brew install xcodegen && xcodegen generate` produces
-# AuraScan.xcodeproj. The generated project is intentionally not committed:
-# the spec is the source of truth, which keeps merges free of pbxproj conflicts.
+# XcodeGen spec — the source of truth for the Xcode project.
+# Generate with ./bootstrap.sh (or `xcodegen generate`).
+# The .xcodeproj is intentionally gitignored: the spec is what gets reviewed,
+# and merges stay free of pbxproj conflicts.
 name: AuraScan
 options:
   bundleIdPrefix: ai.aurascan
@@ -11,31 +12,41 @@ options:
 
 settings:
   base:
+    # The code is written for Swift 6 isolation (MainActor view models,
+    # nonisolated(unsafe) on the AVCaptureSession, explicit `any` on
+    # existentials). If the first build drowns in concurrency diagnostics,
+    # drop to SWIFT_VERSION: "5.0" to get it running, then step back up.
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
     SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
-    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    # Set DEVELOPMENT_TEAM here (or pick a team in Xcode's Signing tab) only
+    # when running on a physical device. Simulator builds need no team.
 
 targets:
   AuraScan:
     type: application
     platform: iOS
     sources:
+      # .xcassets under this path is picked up as a resource automatically.
+      # Info.plist is excluded because it is referenced by INFOPLIST_FILE
+      # instead — listing it in both places makes Xcode copy it into the
+      # bundle a second time.
       - path: AuraScan
         excludes:
           - "Resources/Info.plist"
-    resources:
-      - AuraScan/Resources
-    info:
-      path: AuraScan/Resources/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ai.aurascan.app
+        PRODUCT_NAME: AuraScan
         INFOPLIST_FILE: AuraScan/Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         SUPPORTS_MACCATALYST: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
 
   AuraScanTests:
     type: bundle.unit-test
@@ -47,16 +58,19 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ai.aurascan.app.tests
+        GENERATE_INFOPLIST_FILE: YES
 
 schemes:
   AuraScan:
     build:
       targets:
         AuraScan: all
+        AuraScanTests: [test]
     run:
       config: Debug
       environmentVariables:
-        # Optional: seeds a key for simulator runs without touching the Keychain.
+        # Seeds an API key for simulator runs without touching the Keychain.
+        # Enable it in Xcode's scheme editor and paste a key.
         - variable: AURASCAN_API_KEY
           value: ""
           isEnabled: false

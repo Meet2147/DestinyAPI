@@ -19,11 +19,15 @@ A photo is captured (or picked), sent to a multimodal vision model with a modali
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) — the `.xcodeproj` is generated, not committed
 
 ```bash
-brew install xcodegen
-cd AuraScan
-xcodegen generate
-open AuraScan.xcodeproj
+git clone -b claude/aurascan-ios-app-wzxp9n \
+  https://github.com/Meet2147/DestinyAPI.git AuraScan-repo
+cd AuraScan-repo/AuraScan
+./bootstrap.sh --open      # or --build / --test
 ```
+
+`bootstrap.sh` installs XcodeGen if it is missing, generates
+`AuraScan.xcodeproj` from `project.yml`, and picks whichever iPhone simulator
+is actually installed rather than pinning a device name.
 
 Then run the app, open **Settings**, pick a provider, and paste an API key. The key is written to the iOS Keychain (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) and never leaves the device except in requests to that provider. For simulator convenience, a DEBUG build also reads `AURASCAN_API_KEY` from the scheme environment.
 
