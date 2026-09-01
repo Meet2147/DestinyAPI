@@ -56,7 +56,52 @@ _prepare()
 
 @app.get("/health")
 def health():
-    return {"ok": True, "model": settings.model}
+    # `key_configured` is a boolean, never the key. Without it every reading
+    # fails upstream, and that is otherwise indistinguishable from a network
+    # problem — which is exactly the confusion this is here to end.
+    return {
+        "ok": True,
+        "model": settings.model,
+        "key_configured": bool(settings.anthropic_api_key),
+        "roots_installed": len(_root_count()),
+    }
+
+
+def _root_count():
+    try:
+        from app.receipts import roots
+        return roots()
+    except Exception:
+        return []
+
+
+@app.get("/v1/selftest")
+async def selftest():
+    """Proves whether the relay can actually reach Anthropic.
+
+    Returns a status and a short reason, never the upstream body: an error
+    message can echo request contents back to whoever asks.
+    """
+    if not settings.anthropic_api_key:
+        return {"ok": False, "reason": "ANTHROPIC_API_KEY is not set on this service"}
+    try:
+        async with httpx.AsyncClient(timeout=45) as client:
+            r = await client.post(
+                settings.anthropic_url,
+                json={"model": settings.model, "max_tokens": 1,
+                      "messages": [{"role": "user", "content": "hi"}]},
+                headers={"x-api-key": settings.anthropic_api_key,
+                         "anthropic-version": settings.anthropic_version,
+                         "content-type": "application/json"})
+    except httpx.RequestError as exc:
+        return {"ok": False, "reason": f"cannot reach Anthropic: {type(exc).__name__}"}
+    if r.status_code >= 400:
+        try:
+            kind = r.json().get("error", {}).get("type", "")
+        except Exception:
+            kind = ""
+        return {"ok": False, "upstream_status": r.status_code, "upstream_error": kind}
+    return {"ok": True, "upstream_status": r.status_code}
 
 
 def _cost(usage: dict) -> float:
@@ -107,6 +152,10 @@ async def reading(
     if spend_today() >= settings.daily_spend_cap_usd:
         log.error("daily spend cap hit — refusing readings")
         raise HTTPException(503, "Readings are paused. Please try again later.")
+
+    if not settings.anthropic_api_key:
+        log.error("ANTHROPIC_API_KEY is not set — cannot serve readings")
+        raise HTTPException(503, "The reading service is not configured.")
 
     body = await request.json()
     modality = str(body.get("modality", ""))[:24]
