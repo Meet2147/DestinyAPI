@@ -72,33 +72,40 @@ struct SettingsView: View {
         let entitlements = environment.entitlements
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             SectionHeader(
-                title: entitlements.isSubscribed ? "Your plan" : "AuraScan Pro",
-                subtitle: entitlements.isSubscribed
-                    ? "Thank you — every modality is unlocked"
+                title: entitlements.hasUnlimitedAccess ? "Your plan" : "AuraScan Pro",
+                subtitle: entitlements.hasUnlimitedAccess
+                    ? "Every modality is unlocked"
                     : "Unlimited readings across every modality"
             )
             GlassCard {
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     HStack(spacing: Theme.Spacing.sm) {
-                        Image(systemName: entitlements.isSubscribed
+                        Image(systemName: entitlements.hasUnlimitedAccess
                               ? "checkmark.seal.fill" : "sparkles")
-                            .foregroundStyle(entitlements.isSubscribed
+                            .foregroundStyle(entitlements.hasUnlimitedAccess
                                              ? Theme.Palette.glow : Theme.Palette.gold)
                         Text(entitlements.isSubscribed
                              ? "Subscribed"
-                             : entitlements.freeRemaining == 0
-                               ? "No free readings left"
-                               : "\(entitlements.freeRemaining) of \(Entitlements.freeAllowance) free readings left")
+                             : entitlements.hasUnlimitedAccess
+                               ? "Unlimited readings"
+                               : entitlements.freeRemaining == 0
+                                 ? "No free readings left"
+                                 : "\(entitlements.freeRemaining) of \(Entitlements.freeAllowance) free readings left")
                             .font(Theme.Font.callout)
                             .foregroundStyle(Theme.Palette.starlight)
                     }
-                    if !entitlements.isSubscribed {
-                        Button("See plans") { showPaywall = true }
-                            .buttonStyle(AuraButtonStyle())
-                    } else {
+                    if entitlements.isSubscribed {
                         Text("Manage or cancel in the App Store, under your Apple Account.")
                             .font(Theme.Font.caption)
                             .foregroundStyle(Theme.Palette.dusk)
+                    } else if entitlements.hasUnlimitedAccess {
+                        // Personal build: readings are unlimited, but keep the
+                        // paywall reachable so it can be reviewed before launch.
+                        Button("Preview plans") { showPaywall = true }
+                            .buttonStyle(AuraButtonStyle(isProminent: false))
+                    } else {
+                        Button("See plans") { showPaywall = true }
+                            .buttonStyle(AuraButtonStyle())
                     }
                 }
             }

@@ -11,6 +11,18 @@
 
 import Foundation
 
+/// How billing behaves in this build.
+///
+/// AuraScan is currently used only by its author, against their own API key, so
+/// every reading is allowed and the paywall never appears on its own. Flip this
+/// to `false` at launch — nothing else has to change. The products, the StoreKit
+/// configuration, `PaywallView`, `SubscriptionStore` and the whole allowance
+/// rule below are all still here, still wired up, and still covered by
+/// `EntitlementTests`, which pin the gating behaviour independently of this flag.
+enum BillingMode {
+    static let unlimitedReadings = true
+}
+
 /// Product identifiers, as configured in App Store Connect.
 enum SubscriptionProduct: String, CaseIterable, Sendable {
     case monthly  = "ai.aurascan.pro.monthly"
@@ -84,8 +96,17 @@ final class Entitlements {
 
     private let store: any EntitlementStoring
 
-    init(store: any EntitlementStoring = DefaultsEntitlementStore()) {
+    /// When true, every reading is allowed and nothing is ever counted.
+    /// Injected rather than read statically so the tests can exercise the real
+    /// gating rules regardless of how the app itself is configured.
+    private let unlimited: Bool
+
+    init(
+        store: any EntitlementStoring = DefaultsEntitlementStore(),
+        unlimited: Bool = BillingMode.unlimitedReadings
+    ) {
         self.store = store
+        self.unlimited = unlimited
         self.isSubscribed = store.isSubscribed
         self.used = store.freeReadingsUsed
     }
@@ -93,8 +114,13 @@ final class Entitlements {
     private(set) var isSubscribed: Bool
     private(set) var used: Int
 
+    /// The one question the rest of the app should ask. Covers both the
+    /// personal build and a real subscriber, so callers never have to know
+    /// which of the two they are looking at.
+    var hasUnlimitedAccess: Bool { unlimited || isSubscribed }
+
     var allowance: ReadingAllowance {
-        if isSubscribed { return .subscribed }
+        if hasUnlimitedAccess { return .subscribed }
         let left = Self.freeAllowance - used
         return left > 0 ? .free(remaining: left) : .exhausted
     }
@@ -105,7 +131,7 @@ final class Entitlements {
     /// not cost someone a free run — that is the fastest way to lose them
     /// before they have seen anything work.
     func recordSuccessfulReading() {
-        guard !isSubscribed else { return }
+        guard !hasUnlimitedAccess else { return }
         used += 1
         store.freeReadingsUsed = used
     }
