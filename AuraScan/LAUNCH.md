@@ -23,11 +23,11 @@ will get HTTP 402 "Free readings used" from the relay even with the app flag on.
 
 Things that stop the build uploading, or get it bounced before a human looks.
 
-- ☐ **Privacy manifest.** There is no `PrivacyInfo.xcprivacy` in the target.
-  Required because the app uses required-reason APIs — `UserDefaults`
-  (`CA92.1`) in `DefaultsEntitlementStore`, plus file-timestamp and disk-space
-  APIs via SwiftData's store. Must also declare that no data is used for
-  tracking. *I can write this file — ask.*
+- ☑ **Privacy manifest** — `AuraScan/Resources/PrivacyInfo.xcprivacy` added and
+  wired into the Resources build phase. Declares `UserDefaults` (`CA92.1`),
+  file timestamp (`C617.1`), disk space (`E174.1`), and the three collected
+  data types. **Its answers must match the App Privacy form in App Store
+  Connect exactly** — see section 2.
 - ☐ **App record in App Store Connect** for bundle ID `ai.aurascan.app`.
   `DEVELOPMENT_TEAM` is already set to `C9NLF34677`, so the account exists.
 - ☐ **Paid Apps agreement, banking and tax forms.** In-app purchases cannot be
@@ -41,13 +41,46 @@ Things that stop the build uploading, or get it bounced before a human looks.
   - `ai.aurascan.pro.lifetime` — non-consumable, $149
   Each needs a display name, description, review screenshot, and must be
   submitted **with** the first build, not after it.
-- ☐ **Privacy policy URL** and **support URL**. Both are required fields.
-  The privacy policy must cover: photos sent to your relay for analysis, the
-  per-install device identifier, and purchase status.
-- ☐ **Real screenshots** at the required iPhone sizes (App Store Connect lists
-  the current set). `Design/Screens/*.png` are design mockups, not captures —
-  usable as a layout reference, but shipping them as screenshots misrepresents
-  the app and is rejectable. Capture real ones from a device or simulator.
+- ☐ **Privacy policy URL** and **support URL** — both required fields.
+  A policy drafted against what the code actually does is at
+  `docs/privacy-policy.md`; host it and paste the URL in both places.
+- ☐ **Real screenshots, with real faces, hands and cups.** ← *you flagged this*
+
+  `Design/Screens/*.png` are design mockups with illustrated subjects. They are
+  a layout reference only — shipping them misrepresents the app and is
+  rejectable. **Only you can produce these**, because they need genuine photos
+  of a real person, and nobody here can generate those.
+
+  What to capture, on a real iPhone (not the simulator — the camera path and
+  real photos are the point):
+
+  | # | Screen | Subject |
+  |---|--------|---------|
+  | 1 | Dashboard with 3–4 real readings in history | — |
+  | 2 | Face capture, oval guide aligned | a real face, well lit |
+  | 3 | Face reading result, scrolled to the summary | same face |
+  | 4 | Palm capture, hand guide aligned | a real open palm |
+  | 5 | Palm reading result | same palm |
+  | 6 | Coffee capture, shot down into the cup | a real drained cup with grounds |
+  | 7 | Coffee reading result, zone breakdown expanded | same cup |
+  | 8 | Space reading result | a real desk or room |
+
+  Practical notes:
+  - **Get written permission** from anyone whose face or hands appear. Apple
+    does not ask for it, but you are publishing their likeness commercially.
+    Your own face and hands are the simplest answer.
+  - Shoot in good even light; the reading quality visibly depends on it, and a
+    poor capture produces a low-confidence reading that reads badly in a
+    screenshot.
+  - Take the readings first so history is populated for shot 1.
+  - Capture with Volume Up + Side button, then AirDrop to the Mac.
+  - Sizes: App Store Connect lists the currently required iPhone display sizes.
+    A 6.9" set (1320×2868 or 1290×2796) generally covers the rest by scaling.
+  - Check each shot for anything personal in the status bar or reflected in the
+    cup before uploading.
+
+  Once you have the raw captures, I can crop, size and add caption frames if
+  you want a polished set — send them over.
 
 ---
 
@@ -55,11 +88,15 @@ Things that stop the build uploading, or get it bounced before a human looks.
 
 Things a reviewer will reject.
 
-- ☐ **Paywall is missing Apple's required subscription disclosures**
-  (guideline 3.1.2). `PaywallView` has the auto-renew sentence but **no links to
-  Terms of Use (EULA) and Privacy Policy**, which must be on the paywall screen
-  itself. Also show, per plan: subscription name, length, and price per period.
-  This is one of the most common IAP rejections. *I can fix the view — ask.*
+- ☑ **Paywall disclosures** — Terms of Use and Privacy Policy links now sit on
+  the purchase screen, and each plan states its name, period length and price
+  per period (`SubscriptionProduct.disclosure`).
+- ☐ **…but the URLs are still placeholders.** `Core/LegalLinks.swift` points at
+  `example.com`. A dead link here is a guaranteed rejection. Host
+  `docs/privacy-policy.md` (GitHub Pages off this repo is enough), then set
+  `privacyPolicy` and `support`. A DEBUG build prints a warning at launch while
+  they are unset. Terms of Use already points at Apple's standard EULA, which
+  is valid — select that same EULA in App Store Connect.
 - ☑ **Restore purchases** — present and required.
 - ☐ **App Privacy "nutrition label."** Declare honestly:
   - Photos → *collected, not linked to identity, used for App Functionality.*

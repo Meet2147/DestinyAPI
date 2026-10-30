@@ -172,11 +172,25 @@ struct PaywallView: View {
     }
 
     private var smallPrint: some View {
-        VStack(spacing: 6) {
-            Text(selection.isSubscription
-                 ? "Renews automatically until cancelled. Manage or cancel any time in Settings."
-                 : "A one-time purchase. No renewal, nothing to cancel.")
+        VStack(spacing: 10) {
+            // Guideline 3.1.2 wants the subscription's name, its length and the
+            // price per period stated in text on the purchase screen, not only
+            // inferable from the plan rows.
+            Text(selection.disclosure)
+
             Text("AuraScan is for reflection and entertainment. It is not advice.")
+
+            // Both links must be present and must work. This is the part
+            // reviewers check first on an IAP submission.
+            HStack(spacing: 6) {
+                Link("Terms of Use", destination: LegalLinks.termsOfUse)
+                Text("·")
+                Link("Privacy Policy", destination: LegalLinks.privacyPolicy)
+            }
+            .font(Theme.Font.caption)
+            .foregroundStyle(Theme.Palette.moonlight)
+            .underline()
+            .padding(.top, 2)
         }
         .font(Theme.Font.caption)
         .foregroundStyle(Theme.Palette.dusk)

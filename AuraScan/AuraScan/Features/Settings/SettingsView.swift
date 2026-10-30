@@ -248,6 +248,18 @@ struct SettingsView: View {
                         .font(Theme.Font.caption)
                         .foregroundStyle(Theme.Palette.dusk)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    Divider().overlay(Color.white.opacity(0.06))
+
+                    HStack(spacing: 6) {
+                        Link("Terms of Use", destination: LegalLinks.termsOfUse)
+                        Text("·").foregroundStyle(Theme.Palette.dusk)
+                        Link("Privacy Policy", destination: LegalLinks.privacyPolicy)
+                        Text("·").foregroundStyle(Theme.Palette.dusk)
+                        Link("Support", destination: LegalLinks.support)
+                    }
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Palette.aura)
                 }
             }
         }

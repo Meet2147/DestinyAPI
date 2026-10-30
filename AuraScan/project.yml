@@ -10,6 +10,12 @@ options:
   createIntermediateGroups: true
   generateEmptyDirectories: false
 
+# PrivacyInfo.xcprivacy has to end up in the Resources build phase to reach the
+# bundle, and XcodeGen does not know the extension.
+fileTypes:
+  xcprivacy:
+    buildPhase: resources
+
 settings:
   base:
     # The code is written for Swift 6 isolation (MainActor view models,

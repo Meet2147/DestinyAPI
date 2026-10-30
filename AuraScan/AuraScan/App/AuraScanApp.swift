@@ -11,6 +11,9 @@ struct AuraScanApp: App {
     @State private var environment: AppEnvironment
 
     init() {
+        #if DEBUG
+        LegalLinks.warnIfUnconfigured()
+        #endif
         let container = ModelContainer.aurascan()
         _environment = State(initialValue: AppEnvironment(container: container))
     }

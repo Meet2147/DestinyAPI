@@ -31,6 +31,25 @@ enum SubscriptionProduct: String, CaseIterable, Sendable {
 
     var isSubscription: Bool { self != .lifetime }
 
+    /// The sentence App Review expects on the purchase screen: what the plan is
+    /// called, how long a period lasts, and what each period costs. Kept next to
+    /// `fallbackPrice` so the two cannot drift apart.
+    var disclosure: String {
+        switch self {
+        case .monthly:
+            "AuraScan Pro, a monthly subscription at \(fallbackPrice) per month. "
+                + "It renews automatically until cancelled, and you can cancel any "
+                + "time in your Apple Account settings."
+        case .annual:
+            "AuraScan Pro, a yearly subscription at \(fallbackPrice) per year. "
+                + "It renews automatically until cancelled, and you can cancel any "
+                + "time in your Apple Account settings."
+        case .lifetime:
+            "AuraScan Pro, a one-time purchase of \(fallbackPrice). "
+                + "Nothing renews and there is nothing to cancel."
+        }
+    }
+
     /// Shown only if the store lookup fails; StoreKit's localised price wins.
     var fallbackPrice: String {
         switch self {
